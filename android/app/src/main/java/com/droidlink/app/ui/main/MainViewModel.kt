@@ -123,6 +123,26 @@ class MainViewModel(private val context: Context) : ViewModel() {
     // USB Connection State
     val isUsbConnected: StateFlow<Boolean> = DroidLinkService.isUsbConnected
 
+    // Screen Mirroring State
+    val isScreenMirroringActive: StateFlow<Boolean> = DroidLinkService.isScreenMirroringActive
+
+    fun startScreenMirroring() {
+        DroidLinkService.startScreenMirroringSession()
+    }
+
+    fun stopScreenMirroring() {
+        DroidLinkService.stopScreenMirroringSession()
+    }
+
+    fun triggerTestClipboardSync(): String {
+        val testText = "DroidLink Sync Test #${(1000..9999).random()}"
+        val clip = android.content.ClipData.newPlainText("DroidLink", testText)
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        clipboard.setPrimaryClip(clip)
+        DroidLinkService.triggerClipboardSync()
+        return testText
+    }
+
     // Shizuku Zero-ADB Privileged Mode
     val shizukuState: StateFlow<com.droidlink.app.shizuku.ShizukuState> = com.droidlink.app.shizuku.ShizukuManager.state
 

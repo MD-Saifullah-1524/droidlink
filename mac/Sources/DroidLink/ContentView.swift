@@ -19,6 +19,7 @@ struct MirroredNotificationItem: Identifiable, Equatable {
 enum SidebarSection: String, CaseIterable, Identifiable {
     case home = "Home"
     case externalDisplay = "External Display"
+    case screenMirror = "Phone Screen & Control"
     case apps = "Apps"
     case notifications = "Notifications"
     case clipboard = "Universal Clipboard"
@@ -31,6 +32,7 @@ enum SidebarSection: String, CaseIterable, Identifiable {
         switch self {
         case .home: return "macbook.and.iphone"
         case .externalDisplay: return "display.2"
+        case .screenMirror: return "iphone"
         case .apps: return "square.grid.2x2"
         case .notifications: return "bell.badge"
         case .clipboard: return "doc.on.clipboard"
@@ -91,6 +93,25 @@ struct ContentView: View {
                     } icon: {
                         Image(systemName: SidebarSection.externalDisplay.icon)
                             .foregroundStyle(.indigo)
+                    }
+                }
+
+                NavigationLink(value: SidebarSection.screenMirror) {
+                    Label {
+                        HStack {
+                            Text("Phone Screen & Control")
+                            Spacer()
+                            if ScreenMirroringManager.shared.isMirroringActive {
+                                Circle().fill(Color.green).frame(width: 8, height: 8)
+                            } else if AoaUsbManager.shared.isConnected {
+                                Image(systemName: "bolt.fill")
+                                    .font(.caption2)
+                                    .foregroundStyle(.blue)
+                            }
+                        }
+                    } icon: {
+                        Image(systemName: SidebarSection.screenMirror.icon)
+                            .foregroundStyle(.teal)
                     }
                 }
                 
@@ -195,6 +216,8 @@ struct ContentView: View {
             HomeDetailView(viewModel: viewModel, onNavigate: { selectedSection = $0 })
         case .externalDisplay:
             ExternalDisplayDetailView(viewModel: viewModel)
+        case .screenMirror:
+            ScreenMirrorDetailView(viewModel: viewModel)
         case .apps:
             AppsDetailView(viewModel: viewModel)
         case .notifications:

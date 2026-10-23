@@ -320,6 +320,17 @@ class DroidLinkService : Service() {
         private val _isUsbConnected = MutableStateFlow<Boolean>(false)
         val isUsbConnected: StateFlow<Boolean> = _isUsbConnected.asStateFlow()
 
+        private val _isScreenMirroringActive = MutableStateFlow<Boolean>(false)
+        val isScreenMirroringActive: StateFlow<Boolean> = _isScreenMirroringActive.asStateFlow()
+
+        fun startScreenMirroringSession() {
+            activeServiceInstance?.startScreenMirroring()
+        }
+
+        fun stopScreenMirroringSession() {
+            activeServiceInstance?.stopScreenMirroring()
+        }
+
         private val _remoteDeviceStatus = MutableStateFlow<com.droidlink.app.model.DeviceStatusInfo?>(null)
         val remoteDeviceStatus: StateFlow<com.droidlink.app.model.DeviceStatusInfo?> = _remoteDeviceStatus.asStateFlow()
 
@@ -1565,10 +1576,12 @@ class DroidLinkService : Service() {
         )
         audioCaptureManager = audioMgr
         audioMgr.start()
+        _isScreenMirroringActive.value = true
         Log.i(TAG, "Screen and internal audio mirroring pipelines fully initialized")
     }
 
     private fun stopScreenMirroring() {
+        _isScreenMirroringActive.value = false
         videoSenderJob?.cancel()
         videoSenderJob = null
         videoFrameChannel?.close()

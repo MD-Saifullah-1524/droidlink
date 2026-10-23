@@ -70,6 +70,7 @@
 		A1000072 /* H264DecoderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000072 /* H264DecoderView.swift */; };
 		A1000073 /* ScreenMirrorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000073 /* ScreenMirrorView.swift */; };
 		A1000074 /* ScreenMirroringWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000074 /* ScreenMirroringWindowController.swift */; };
+		A100007F /* ScreenMirrorDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200007F /* ScreenMirrorDetailView.swift */; };
 		A1000075 /* ScreenAudioEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000075 /* ScreenAudioEngine.swift */; };
 		A1000076 /* ScreenMirroringManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000076 /* ScreenMirroringManager.swift */; };
 		A100001C /* external_display.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200001C /* external_display.pb.swift */; };
@@ -159,6 +160,7 @@
 		A2000072 /* H264DecoderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = H264DecoderView.swift; sourceTree = "<group>"; };
 		A2000073 /* ScreenMirrorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenMirrorView.swift; sourceTree = "<group>"; };
 		A2000074 /* ScreenMirroringWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenMirroringWindowController.swift; sourceTree = "<group>"; };
+		A200007F /* ScreenMirrorDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenMirrorDetailView.swift; sourceTree = "<group>"; };
 		A2000075 /* ScreenAudioEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenAudioEngine.swift; sourceTree = "<group>"; };
 		A2000076 /* ScreenMirroringManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenMirroringManager.swift; sourceTree = "<group>"; };
 		A200001C /* external_display.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = external_display.pb.swift; sourceTree = "<group>"; };
@@ -228,6 +230,7 @@
 				A2000073 /* ScreenMirrorView.swift */,
 				A2000074 /* ScreenMirroringWindowController.swift */,
 				A2000077 /* ExternalDisplayDetailView.swift */,
+				A200007F /* ScreenMirrorDetailView.swift */,
 				A200002C /* DroidLink.entitlements */,
 				A200002D /* Info.plist */,
 			);
@@ -472,6 +475,7 @@
 				A100007C /* ExternalDisplayManager.swift in Sources */,
 				A100007D /* AoaUsbManager.swift in Sources */,
 				A100007E /* AoaHidController.swift in Sources */,
+				A100007F /* ScreenMirrorDetailView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -514,7 +518,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ENABLE_MODULES = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 80;
+				CURRENT_PROJECT_VERSION = 82;
 				MARKETING_VERSION = 1.1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -539,7 +543,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ENABLE_MODULES = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 80;
+				CURRENT_PROJECT_VERSION = 82;
 				MARKETING_VERSION = 1.1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
@@ -558,7 +562,7 @@
 				CODE_SIGN_ENTITLEMENTS = Sources/DroidLink/DroidLink.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 80;
+				CURRENT_PROJECT_VERSION = 82;
 				MARKETING_VERSION = 1.1;
 				DEVELOPMENT_TEAM = CFV38KGZ97;
 				ENABLE_HARDENED_RUNTIME = NO;
@@ -582,7 +586,7 @@
 				CODE_SIGN_ENTITLEMENTS = Sources/DroidLink/DroidLink.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 80;
+				CURRENT_PROJECT_VERSION = 82;
 				MARKETING_VERSION = 1.1;
 				DEVELOPMENT_TEAM = CFV38KGZ97;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -605,7 +609,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = Sources/DroidLinkFileProvider/DroidLinkFileProvider.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 80;
+				CURRENT_PROJECT_VERSION = 82;
 				MARKETING_VERSION = 1.1;
 				DEVELOPMENT_TEAM = CFV38KGZ97;
 				ENABLE_HARDENED_RUNTIME = NO;
@@ -630,7 +634,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = Sources/DroidLinkFileProvider/DroidLinkFileProvider.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 80;
+				CURRENT_PROJECT_VERSION = 82;
 				MARKETING_VERSION = 1.1;
 				DEVELOPMENT_TEAM = CFV38KGZ97;
 				ENABLE_HARDENED_RUNTIME = YES;

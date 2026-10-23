@@ -18,19 +18,27 @@ struct FeaturesDetailView: View {
                 
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
                     featureItem(
-                        icon: "arrow.left.arrow.right",
+                        icon: "folder.fill",
                         color: .blue,
-                        title: "File Transfer",
-                        description: "High-speed local Wi-Fi and USB drag-and-drop file transfers with zero cloud relay.",
-                        status: "Phase 1 - In Progress"
+                        title: "Android Storage in Finder",
+                        description: "Native macOS NSFileProvider integration with supercharged AOA 2.0 wire speed and local Wi-Fi fallback.",
+                        status: "Available Now"
                     )
                     
                     featureItem(
-                        icon: "display",
+                        icon: "iphone",
+                        color: .teal,
+                        title: "Phone Screen & Control",
+                        description: "Low-latency reverse screen mirroring with native hardware USB HID mouse & keyboard and AOD privacy mode.",
+                        status: "Available Now"
+                    )
+                    
+                    featureItem(
+                        icon: "display.2",
                         color: .indigo,
-                        title: "Screen Mirroring",
-                        description: "Low-latency H.264 screen mirroring with remote touch and keyboard input control.",
-                        status: "Phase 1 - In Progress"
+                        title: "External Display for Mac",
+                        description: "Use your Android tablet or phone as an ultra-low latency extended macOS monitor over direct USB.",
+                        status: "Available Now"
                     )
                     
                     featureItem(

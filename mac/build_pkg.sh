@@ -63,6 +63,14 @@ rm -rf .pkg_staging
 rm -rf DroidLink.app DroidLinkCall.app DroidLinkMessages.app
 cp -R "$BUILT_APP" DroidLink.app
 
+echo "🚀 5. Updating /Applications/DroidLink.app..."
+rm -rf /Applications/DroidLink.app 2>/dev/null || true
+cp -R "$BUILT_APP" /Applications/DroidLink.app 2>/dev/null || true
+if [ -d "$HOME/Applications" ]; then
+    rm -rf "$HOME/Applications/DroidLink.app" 2>/dev/null || true
+    cp -R "$BUILT_APP" "$HOME/Applications/DroidLink.app" 2>/dev/null || true
+fi
+
 echo ""
 echo "=========================================================="
 echo "✅ DroidLink.pkg generated successfully!"

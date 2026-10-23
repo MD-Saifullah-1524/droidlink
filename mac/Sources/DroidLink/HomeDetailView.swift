@@ -382,29 +382,55 @@ struct HomeDetailView: View {
                         // Screen Mirroring Module
                         HStack(spacing: 14) {
                             SquircleIcon(
-                                icon: "display",
+                                icon: "iphone",
                                 gradient: LinearGradient(colors: [.teal, .mint], startPoint: .topLeading, endPoint: .bottomTrailing),
                                 size: 36,
                                 iconSize: 18
                             )
                             
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Screen Mirroring")
-                                    .font(.system(size: 13, weight: .semibold))
-                                Text("Low-latency H.264 screen streaming")
+                                HStack(spacing: 6) {
+                                    Text("Phone Screen & Control")
+                                        .font(.system(size: 13, weight: .semibold))
+                                    if ScreenMirroringManager.shared.isMirroringActive {
+                                        StatusBadge(title: "Active", color: .green)
+                                    } else if aoaUsbManager.isConnected {
+                                        StatusBadge(title: "⚡ USB HID Ready", color: .blue)
+                                    }
+                                }
+                                Text(ScreenMirroringManager.shared.isMirroringActive ?
+                                     "Streaming live Android screen with hardware USB HID" :
+                                     (aoaUsbManager.isConnected ? "Hardware AOA 2.0 USB mouse & keyboard control ready" : "Reverse display & control over Wi-Fi/USB"))
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                             }
                             
                             Spacer()
                             
-                            Text("Phase 2")
-                                .font(.system(size: 10, weight: .medium))
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.secondary.opacity(0.12))
-                                .clipShape(Capsule())
+                            if ScreenMirroringManager.shared.isMirroringActive {
+                                Button("Stop") {
+                                    ScreenMirroringManager.shared.stopMirroring()
+                                }
+                                .buttonStyle(.bordered)
+                                .tint(.red)
+                                .controlSize(.small)
+                            } else {
+                                Button("Start") {
+                                    ScreenMirroringManager.shared.startMirroring()
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .controlSize(.small)
+                            }
+
+                            Button {
+                                onNavigate?(.screenMirror)
+                            } label: {
+                                Image(systemName: "chevron.forward")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.leading, 4)
                         }
                         .padding(.vertical, 8)
                     }

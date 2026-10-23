@@ -8,3 +8,9 @@ plugins {
     id("com.google.dagger.hilt.android") version "2.51.1" apply false
     id("org.jetbrains.kotlin.kapt") version "2.0.0" apply false
 }
+
+allprojects {
+    val buildRoot = System.getenv("GRADLE_BUILD_DIR") ?: "/tmp/droidlink-android-build"
+    val projectFolder = if (path == ":") "root" else path.replace(":", "_")
+    layout.buildDirectory.set(file("$buildRoot/$projectFolder"))
+}

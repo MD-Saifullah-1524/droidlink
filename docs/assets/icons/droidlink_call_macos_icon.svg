@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <!-- macOS Drop Shadow Filter -->
+    <filter id="callSquircleShadow" x="-10%" y="-10%" width="125%" height="130%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="32" stdDeviation="28" flood-color="#000000" flood-opacity="0.45" />
+      <feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="#000000" flood-opacity="0.30" />
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000000" flood-opacity="0.25" />
+    </filter>
+
+    <filter id="callGlyphShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="16" flood-color="#000000" flood-opacity="0.48" />
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.30" />
+    </filter>
+
+    <!-- Gradients -->
+    <!-- Background: Luxury Emerald Obsidian -->
+    <linearGradient id="callBgGrad" x1="15%" y1="10%" x2="85%" y2="90%">
+      <stop offset="0%" stop-color="#14261D" />
+      <stop offset="45%" stop-color="#0D1A14" />
+      <stop offset="100%" stop-color="#060E0A" />
+    </linearGradient>
+
+    <!-- Metallic Rim Bevel -->
+    <linearGradient id="callBevelGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.28" />
+      <stop offset="40%" stop-color="#FFFFFF" stop-opacity="0.08" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.5" />
+    </linearGradient>
+
+    <!-- Handset Gradient: Apple Call Green with Cyber Emerald highlight -->
+    <linearGradient id="phoneGrad" x1="15%" y1="15%" x2="85%" y2="85%">
+      <stop offset="0%" stop-color="#3CEB73" />
+      <stop offset="45%" stop-color="#30D158" />
+      <stop offset="100%" stop-color="#19993C" />
+    </linearGradient>
+
+    <!-- Sound Bridge Wave Gradient: Emerald to Electric Cyan to Apple Sapphire -->
+    <linearGradient id="soundWaveGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00F5A0" />
+      <stop offset="45%" stop-color="#00E5FF" />
+      <stop offset="100%" stop-color="#0A84FF" />
+    </linearGradient>
+
+    <!-- Ambient Aura -->
+    <radialGradient id="callAura" cx="45%" cy="50%" r="55%">
+      <stop offset="0%" stop-color="#30D158" stop-opacity="0.28" />
+      <stop offset="50%" stop-color="#00E5FF" stop-opacity="0.12" />
+      <stop offset="100%" stop-color="#30D158" stop-opacity="0" />
+    </radialGradient>
+
+    <linearGradient id="callGleam" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.45" />
+      <stop offset="35%" stop-color="#FFFFFF" stop-opacity="0.1" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Clip Paths -->
+    <clipPath id="callSquircleClip">
+      <rect x="100" y="100" width="824" height="824" rx="185" ry="185" />
+    </clipPath>
+  </defs>
+
+  <!-- Base Squircle -->
+  <rect x="100" y="100" width="824" height="824" rx="185" ry="185" fill="url(#callBgGrad)" filter="url(#callSquircleShadow)" />
+
+  <g clip-path="url(#callSquircleClip)">
+    <!-- Ambient Glow -->
+    <rect x="100" y="100" width="824" height="824" fill="url(#callAura)" />
+
+    <!-- Radar / Concentric Wave Texture -->
+    <g opacity="0.06" stroke="#FFFFFF" stroke-width="1.5" fill="none">
+      <circle cx="512" cy="512" r="160" stroke-dasharray="6 8" />
+      <circle cx="512" cy="512" r="240" stroke-dasharray="8 10" />
+      <circle cx="512" cy="512" r="320" />
+    </g>
+
+    <!-- Top Specular Glass Reflection Curve -->
+    <path d="M 100,285 C 100,165 165,100 285,100 L 739,100 C 859,100 924,165 924,285 L 924,420 C 650,490 350,470 100,420 Z" fill="url(#callGleam)" opacity="0.12" />
+
+    <!-- MAIN CALL COMPOSITE GLYPH (Centered at 512, 512) -->
+    <g filter="url(#callGlyphShadow)" transform="translate(-24, 8)">
+      
+      <!-- Modern Ergonomic Telephone Handset -->
+      <g>
+        <path d="M 390 270 
+                 C 425 240 475 245 505 280 
+                 L 535 315 
+                 C 555 340 550 375 525 398 
+                 L 475 440 
+                 C 465 450 462 465 470 478 
+                 C 495 522 532 559 576 584 
+                 C 589 592 604 589 614 579 
+                 L 656 529 
+                 C 679 504 714 499 739 519 
+                 L 774 549 
+                 C 809 579 814 629 784 664 
+                 L 750 704 
+                 C 720 739 670 754 625 734 
+                 C 460 660 350 540 280 380 
+                 C 260 335 275 285 310 255 
+                 Z" 
+              fill="url(#phoneGrad)" />
+
+        <!-- Specular Highlight Stroke on Handset Rim -->
+        <path d="M 390 270 
+                 C 425 240 475 245 505 280 
+                 L 535 315 
+                 C 555 340 550 375 525 398 
+                 L 475 440 
+                 C 465 450 462 465 470 478 
+                 C 495 522 532 559 576 584 
+                 C 589 592 604 589 614 579 
+                 L 656 529 
+                 C 679 504 714 499 739 519 
+                 L 774 549 
+                 C 809 579 814 629 784 664 
+                 L 750 704 
+                 C 720 739 670 754 625 734 
+                 C 460 660 350 540 280 380 
+                 C 260 335 275 285 310 255 
+                 Z" 
+              fill="none" stroke="url(#callGleam)" stroke-width="8" opacity="0.55" />
+      </g>
+
+      <!-- Radiating Acoustic Bridge Waves projecting out of the handset -->
+      <g stroke="url(#soundWaveGrad)" stroke-linecap="round" fill="none">
+        <!-- Wave 1 (Inner Arc) -->
+        <path d="M 590 390 C 640 435 640 495 590 540" stroke-width="26" />
+        
+        <!-- Wave 2 (Middle Arc with DroidLink energy) -->
+        <path d="M 660 320 C 745 390 745 530 660 600" stroke-width="24" />
+        
+        <!-- Wave 3 (Outer Arc) -->
+        <path d="M 730 250 C 850 345 850 575 730 670" stroke-width="22" stroke-dasharray="140 18 200 0" />
+      </g>
+
+      <!-- Active Telephony Beacon -->
+      <g transform="translate(712 460)">
+        <circle cx="0" cy="0" r="22" fill="url(#soundWaveGrad)" opacity="0.6" />
+        <circle cx="0" cy="0" r="8" fill="#FFFFFF" />
+      </g>
+
+      <!-- Android Antenna Detail on the Outer Sound Arc -->
+      <g stroke="#00F5A0" stroke-width="14" stroke-linecap="round">
+        <line x1="775" y1="285" x2="815" y2="235" />
+      </g>
+      <circle cx="818" cy="231" r="8" fill="#FFFFFF" />
+    </g>
+
+    <!-- Glass Rim Bevel -->
+    <rect x="101" y="101" width="822" height="822" rx="184" ry="184" fill="none" stroke="url(#callBevelGrad)" stroke-width="2.5" />
+  </g>
+</svg>

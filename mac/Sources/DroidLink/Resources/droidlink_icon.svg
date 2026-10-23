@@ -1,0 +1,194 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <!-- macOS Drop Shadow Filter -->
+    <filter id="macSquircleShadow" x="-10%" y="-10%" width="125%" height="130%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="32" stdDeviation="28" flood-color="#000000" flood-opacity="0.45" />
+      <feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="#000000" flood-opacity="0.30" />
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000000" flood-opacity="0.25" />
+    </filter>
+
+    <!-- Glyph Elevation Shadow -->
+    <filter id="glyphShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="16" flood-color="#000000" flood-opacity="0.55" />
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000000" flood-opacity="0.35" />
+    </filter>
+
+    <!-- Overlap Shadows for 3D Interlock -->
+    <filter id="overlapShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="-4" dy="8" stdDeviation="8" flood-color="#000000" flood-opacity="0.6" />
+    </filter>
+
+    <!-- Gradients -->
+    <!-- Background Gradient: Deep Space Obsidian -->
+    <linearGradient id="macBgGrad" x1="15%" y1="10%" x2="85%" y2="90%">
+      <stop offset="0%" stop-color="#1C2333" />
+      <stop offset="45%" stop-color="#111624" />
+      <stop offset="100%" stop-color="#080B12" />
+    </linearGradient>
+
+    <!-- Subtle Metallic Edge Bevel -->
+    <linearGradient id="macBevelGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.28" />
+      <stop offset="40%" stop-color="#FFFFFF" stop-opacity="0.08" />
+      <stop offset="70%" stop-color="#000000" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.6" />
+    </linearGradient>
+
+    <!-- Ambient Glows -->
+    <radialGradient id="androidAmbient" cx="35%" cy="50%" r="45%">
+      <stop offset="0%" stop-color="#00F5A0" stop-opacity="0.25" />
+      <stop offset="60%" stop-color="#3DDC84" stop-opacity="0.08" />
+      <stop offset="100%" stop-color="#3DDC84" stop-opacity="0" />
+    </radialGradient>
+
+    <radialGradient id="appleAmbient" cx="65%" cy="50%" r="45%">
+      <stop offset="0%" stop-color="#0A84FF" stop-opacity="0.3" />
+      <stop offset="60%" stop-color="#5E5CE6" stop-opacity="0.1" />
+      <stop offset="100%" stop-color="#5E5CE6" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Android Link Gradient (Left) -->
+    <linearGradient id="androidLinkGrad" x1="20%" y1="10%" x2="80%" y2="90%">
+      <stop offset="0%" stop-color="#5AF2A5" />
+      <stop offset="45%" stop-color="#3DDC84" />
+      <stop offset="100%" stop-color="#00C48C" />
+    </linearGradient>
+
+    <!-- Apple Link Gradient (Right) -->
+    <linearGradient id="appleLinkGrad" x1="20%" y1="10%" x2="80%" y2="90%">
+      <stop offset="0%" stop-color="#409CFF" />
+      <stop offset="50%" stop-color="#0A84FF" />
+      <stop offset="100%" stop-color="#5E5CE6" />
+    </linearGradient>
+
+    <!-- Sheen Overlays -->
+    <linearGradient id="specularGleam" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.45" />
+      <stop offset="35%" stop-color="#FFFFFF" stop-opacity="0.1" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Central Pulse Spark Gradient -->
+    <radialGradient id="sparkGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="30%" stop-color="#70E4FF" />
+      <stop offset="70%" stop-color="#00C7FF" stop-opacity="0.5" />
+      <stop offset="100%" stop-color="#00C7FF" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Clip Paths -->
+    <clipPath id="macSquircleClip">
+      <rect x="100" y="100" width="824" height="824" rx="185" ry="185" />
+    </clipPath>
+    
+    <clipPath id="topOverlapClip">
+      <rect x="420" y="320" width="184" height="180" />
+    </clipPath>
+  </defs>
+
+  <!-- Base Squircle with macOS Elevation Shadow -->
+  <rect x="100" y="100" width="824" height="824" rx="185" ry="185" fill="url(#macBgGrad)" filter="url(#macSquircleShadow)" />
+
+  <!-- Inside Clipped Content -->
+  <g clip-path="url(#macSquircleClip)">
+    <!-- Ambient Internal Glows -->
+    <rect x="100" y="100" width="824" height="824" fill="url(#androidAmbient)" />
+    <rect x="100" y="100" width="824" height="824" fill="url(#appleAmbient)" />
+
+    <!-- Subtle Diagonal Mesh Grid Accent -->
+    <g opacity="0.04" stroke="#FFFFFF" stroke-width="1.5">
+      <line x1="100" y1="200" x2="924" y2="200" />
+      <line x1="100" y1="360" x2="924" y2="360" />
+      <line x1="100" y1="520" x2="924" y2="520" />
+      <line x1="100" y1="680" x2="924" y2="680" />
+      <line x1="100" y1="840" x2="924" y2="840" />
+      <line x1="260" y1="100" x2="260" y2="924" />
+      <line x1="420" y1="100" x2="420" y2="924" />
+      <line x1="580" y1="100" x2="580" y2="924" />
+      <line x1="740" y1="100" x2="740" y2="924" />
+    </g>
+
+    <!-- Top Specular Glass Reflection Curve -->
+    <path d="M 100,285 C 100,165 165,100 285,100 L 739,100 C 859,100 924,165 924,285 L 924,420 C 650,490 350,470 100,420 Z" fill="url(#specularGleam)" opacity="0.14" />
+
+    <!-- MAIN GLYPH GROUP (Optical center balanced at 512, 512) -->
+    <g filter="url(#glyphShadow)" transform="translate(0, 22)">
+      
+      <!-- ANDROID SIDE: Antennas -->
+      <g stroke="url(#androidLinkGrad)" stroke-width="18" stroke-linecap="round">
+        <line x1="335" y1="385" x2="280" y2="310" />
+        <line x1="405" y1="340" x2="385" y2="255" />
+      </g>
+      <!-- Small Antenna Orb Tips -->
+      <circle cx="277" cy="306" r="10" fill="#5AF2A5" />
+      <circle cx="384" cy="251" r="10" fill="#5AF2A5" />
+
+      <!-- MAC / APPLE LINK (Underneath at top, Over at bottom) -->
+      <g id="appleLoop">
+        <rect x="430" y="440" width="300" height="150" rx="75" ry="75" 
+              transform="rotate(-35 580 515)" 
+              fill="none" 
+              stroke="url(#appleLinkGrad)" 
+              stroke-width="48" 
+              stroke-linejoin="round" />
+        <!-- Inner Specular Highlight on Apple Loop -->
+        <rect x="430" y="440" width="300" height="150" rx="75" ry="75" 
+              transform="rotate(-35 580 515)" 
+              fill="none" 
+              stroke="url(#specularGleam)" 
+              stroke-width="10" 
+              opacity="0.5" />
+      </g>
+
+      <!-- ANDROID LINK (Over at top, Underneath at bottom) -->
+      <g id="androidLoop">
+        <rect x="294" y="440" width="300" height="150" rx="75" ry="75" 
+              transform="rotate(35 444 515)" 
+              fill="none" 
+              stroke="url(#androidLinkGrad)" 
+              stroke-width="48" 
+              stroke-linejoin="round" />
+        <!-- Inner Specular Highlight on Android Loop -->
+        <rect x="294" y="440" width="300" height="150" rx="75" ry="75" 
+              transform="rotate(35 444 515)" 
+              fill="none" 
+              stroke="url(#specularGleam)" 
+              stroke-width="10" 
+              opacity="0.5" />
+      </g>
+
+      <!-- Top Interlock Crossover (Android link cleanly weaves OVER Apple link) -->
+      <g clip-path="url(#topOverlapClip)" filter="url(#overlapShadow)">
+        <rect x="294" y="440" width="300" height="150" rx="75" ry="75" 
+              transform="rotate(35 444 515)" 
+              fill="none" 
+              stroke="url(#androidLinkGrad)" 
+              stroke-width="48" />
+        <rect x="294" y="440" width="300" height="150" rx="75" ry="75" 
+              transform="rotate(35 444 515)" 
+              fill="none" 
+              stroke="url(#specularGleam)" 
+              stroke-width="10" 
+              opacity="0.5" />
+      </g>
+
+      <!-- Central Bridge Energy Pulse Node -->
+      <g transform="translate(512 515)">
+        <!-- Outer Halo -->
+        <circle cx="0" cy="0" r="34" fill="url(#sparkGrad)" opacity="0.85" />
+        <!-- Core Solid Star/Diamond Spark -->
+        <path d="M 0,-20 Q 0,0 20,0 Q 0,0 0,20 Q 0,0 -20,0 Q 0,0 0,-20 Z" fill="#FFFFFF" />
+        <circle cx="0" cy="0" r="4.5" fill="#00F5D4" />
+      </g>
+
+      <!-- Data Stream Packet Particles linking the loops -->
+      <circle cx="430" cy="460" r="5" fill="#70E4FF" opacity="0.9" />
+      <circle cx="480" cy="485" r="4" fill="#FFFFFF" opacity="0.95" />
+      <circle cx="544" cy="545" r="4" fill="#FFFFFF" opacity="0.95" />
+      <circle cx="594" cy="570" r="5" fill="#A4C9FF" opacity="0.9" />
+    </g>
+
+    <!-- Rim Glass Bevel Stroke -->
+    <rect x="101" y="101" width="822" height="822" rx="184" ry="184" fill="none" stroke="url(#macBevelGrad)" stroke-width="2.5" />
+  </g>
+</svg>

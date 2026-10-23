@@ -1,0 +1,104 @@
+syntax = "proto3";
+
+package droidlink.protocol;
+
+option java_outer_classname = "ExternalDisplayProto";
+
+// External display stream and control messages
+message ExternalDisplayMessage {
+  enum DisplayEventType {
+    EVENT_UNKNOWN = 0;
+    START_REQUEST = 1;      // Mac or Android requests to start external display session
+    START_RESPONSE = 2;     // Confirmation with accepted configuration
+    STARTED = 3;            // Virtual display created and active
+    STOP = 4;               // Stop external display session
+    VIDEO_FRAME = 5;        // Video stream packet (H.264 / HEVC NALU)
+    INPUT_EVENT = 6;        // Touch, stylus, mouse, or keyboard event from Android to Mac
+    CONFIG_UPDATE = 7;      // Dynamic resolution or refresh rate change
+    HEARTBEAT = 8;          // Keepalive / latency probe
+    ERROR = 9;              // Error message
+  }
+
+  DisplayEventType event = 1;
+
+  // Session configuration (for START_REQUEST / START_RESPONSE / STARTED)
+  ExternalDisplayConfig config = 2;
+
+  // Video frame payload (for VIDEO_FRAME)
+  ExternalDisplayFrame frame = 3;
+
+  // Input event payload (for INPUT_EVENT)
+  ExternalDisplayInput input = 4;
+
+  // Status / error message
+  string message = 5;
+
+  // Timestamp in milliseconds
+  int64 timestamp = 6;
+}
+
+// Configuration for virtual display session
+message ExternalDisplayConfig {
+  int32 width = 1;               // Width in pixels (e.g. 1920, 2560)
+  int32 height = 2;              // Height in pixels (e.g. 1080, 1600)
+  int32 fps = 3;                 // Target frame rate (60, 120)
+  int32 dpi = 4;                 // Display density (e.g. 320, 420)
+  bool hi_dpi = 5;               // Retina 2x scaling
+  int32 bitrate_kbps = 6;        // Bitrate in kbps (e.g. 10000 kbps)
+  DisplayCodec codec = 7;          // H264 or H265
+  bool enable_audio = 8;         // Forward audio to Android
+  bool enable_input = 9;         // Enable touch/stylus back to Mac
+  float scale_factor = 10;       // UI Scaling factor (1.0, 1.25, 1.5, 1.75, 2.0)
+}
+
+enum DisplayCodec {
+  DISPLAY_CODEC_UNKNOWN = 0;
+  DISPLAY_H264 = 1;
+  DISPLAY_H265 = 2;
+}
+
+// Compressed video frame
+message ExternalDisplayFrame {
+  bytes frame_data = 1;          // H.264 NALUs (Annex B)
+  int32 frame_number = 2;
+  int64 timestamp = 3;
+  bool is_keyframe = 4;
+  int32 width = 5;
+  int32 height = 6;
+}
+
+// Remote touch, stylus, mouse, or keyboard input
+message ExternalDisplayInput {
+  enum ActionType {
+    ACTION_UNKNOWN = 0;
+    DOWN = 1;
+    MOVE = 2;
+    UP = 3;
+    SCROLL = 4;
+    CANCEL = 5;
+    KEY_DOWN = 6;
+    KEY_UP = 7;
+  }
+
+  enum ToolType {
+    TOOL_UNKNOWN = 0;
+    FINGER = 1;
+    STYLUS = 2;
+    MOUSE = 3;
+  }
+
+  ActionType action = 1;
+  ToolType tool_type = 2;
+  int32 pointer_id = 3;
+  float normalized_x = 4;        // 0.0 to 1.0 relative to display width
+  float normalized_y = 5;        // 0.0 to 1.0 relative to display height
+  float pressure = 6;            // Stylus / touch pressure (0.0 to 1.0)
+  float tilt_x = 7;              // Stylus tilt X (-90 to +90 degrees)
+  float tilt_y = 8;              // Stylus tilt Y (-90 to +90 degrees)
+  int32 button_state = 9;        // Bitmask for mouse buttons (1=left, 2=right, 4=middle)
+  float scroll_dx = 10;          // Horizontal scroll delta
+  float scroll_dy = 11;          // Vertical scroll delta
+  int32 key_code = 12;           // Key code
+  int32 modifiers = 13;          // Modifiers bitmask
+  string characters = 14;        // Typed text / characters
+}

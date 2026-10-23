@@ -14,6 +14,20 @@ message ScreenMessage {
     PAUSE = 4;                     // Pause streaming
     RESUME = 5;                    // Resume streaming
     STREAM_ERROR = 6;              // Stream error
+    START_REQUEST = 10;            // Mac requests Android to start stream
+    STARTED = 11;                  // Stream officially started with ScreenInfo
+    TOUCH_EVENT = 14;              // Mouse/touch gesture
+    KEY_EVENT = 15;                // Keyboard/text input
+    NAV_EVENT = 16;                // Android navigation action (Back, Home, etc.)
+    ROTATE_REQUEST = 17;           // Rotate orientation request
+    SCREEN_INFO = 18;              // Dynamic screen metrics or rotation update
+    AUDIO_FRAME = 19;              // Internal Android audio stream to Mac
+    LIST_APPS_REQUEST = 20;        // Mac requests list of installed apps
+    LIST_APPS_RESPONSE = 21;       // Android returns list of installed apps
+    LAUNCH_APP_REQUEST = 22;       // Mac requests Android to launch app
+    LAUNCH_APP_RESPONSE = 23;      // Launch app result
+    MIC_DATA = 24;                 // Mac microphone audio stream to Android
+    MIC_CONTROL = 25;              // Mac mic control (mute/unmute)
   }
 
   StreamEventType event = 1;
@@ -32,6 +46,19 @@ message ScreenMessage {
 
   // For PAUSE/RESUME
   int64 paused_at = 8;             // Timestamp when paused
+
+  // Extended features
+  ScreenInfo screen_info = 10;
+  TouchEvent touch_event = 11;
+  KeyEvent key_event = 12;
+  NavigationEvent nav_event = 13;
+  RotateRequest rotate_request = 14;
+  ScreenAudioFrame audio_frame = 15;
+  MicAudioFrame mic_frame = 16;
+  MicControl mic_control = 17;
+  ListAppsResponse list_apps_response = 18;
+  LaunchAppRequest launch_app_request = 19;
+  LaunchAppResponse launch_app_response = 20;
 }
 
 // Stream configuration
@@ -41,10 +68,121 @@ message StreamConfig {
   int32 fps = 3;                   // Target FPS
   int32 bitrate = 4;               // Bitrate (kbps)
   VideoCodec codec = 5;
+  bool enable_audio = 6;
+  bool enable_mic = 7;
 }
 
 enum VideoCodec {
   CODEC_UNKNOWN = 0;
   H264 = 1;                        // H.264 baseline
   H265 = 2;                        // H.265/HEVC (future)
+}
+
+// App Information for Sidebar Apps Drawer
+message AppInfo {
+  string package_name = 1;
+  string app_name = 2;
+  bytes icon_png = 3;              // PNG icon data
+  bool is_system = 4;
+  string version_name = 5;
+}
+
+message ListAppsResponse {
+  repeated AppInfo apps = 1;
+}
+
+message LaunchAppRequest {
+  string package_name = 1;
+}
+
+message LaunchAppResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+// Screen Display Metrics
+message ScreenInfo {
+  int32 width = 1;
+  int32 height = 2;
+  int32 rotation = 3;              // Degrees (0, 90, 180, 270)
+  int32 dpi = 4;
+}
+
+// Touch & Mouse Gestures
+message TouchEvent {
+  enum TouchAction {
+    DOWN = 0;
+    MOVE = 1;
+    UP = 2;
+    CANCEL = 3;
+    SCROLL = 4;
+  }
+  TouchAction action = 1;
+  float x = 2;                     // Normalized (0.0 to 1.0)
+  float y = 3;                     // Normalized (0.0 to 1.0)
+  float scroll_dx = 4;
+  float scroll_dy = 5;
+  int32 pointer_id = 6;
+}
+
+// Keyboard Input
+message KeyEvent {
+  enum KeyAction {
+    KEY_DOWN = 0;
+    KEY_UP = 1;
+    TEXT_INPUT = 2;
+  }
+  KeyAction action = 1;
+  int32 key_code = 2;              // Android KeyEvent keycode
+  string text = 3;                 // Text input for direct unicode typing
+  int32 meta_state = 4;            // Shift, Alt, Ctrl flags
+}
+
+// Navigation Controls
+message NavigationEvent {
+  enum NavAction {
+    NAV_UNKNOWN = 0;
+    BACK = 1;
+    HOME = 2;
+    RECENTS = 3;
+    POWER = 4;
+    NOTIFICATIONS = 5;
+    QUICK_SETTINGS = 6;
+    VOLUME_UP = 7;
+    VOLUME_DOWN = 8;
+    SCREENSHOT = 9;
+  }
+  NavAction action = 1;
+}
+
+// Screen Rotation Request
+message RotateRequest {
+  enum RotationMode {
+    ROTATION_AUTO = 0;
+    ROTATION_PORTRAIT = 1;
+    ROTATION_LANDSCAPE = 2;
+  }
+  RotationMode mode = 1;
+}
+
+// Internal Device Audio Stream (Android -> Mac)
+message ScreenAudioFrame {
+  bytes audio_data = 1;            // 16-bit PCM
+  int32 sample_rate = 2;           // e.g., 48000
+  int32 channels = 3;              // 1 = mono, 2 = stereo
+  int64 timestamp = 4;
+}
+
+// Microphone Audio Stream (Mac -> Android)
+message MicAudioFrame {
+  bytes audio_data = 1;            // 16-bit PCM
+  int32 sample_rate = 2;           // e.g., 48000
+  int32 channels = 3;              // 1 = mono, 2 = stereo
+  int64 timestamp = 4;
+}
+
+// Microphone Control
+message MicControl {
+  bool is_muted = 1;
+  bool is_recording = 2;
 }

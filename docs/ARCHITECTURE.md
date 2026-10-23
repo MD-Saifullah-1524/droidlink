@@ -18,36 +18,39 @@
 
 ## System Overview
 
-DroidLink uses a **client-server architecture** with bidirectional communication:
+DroidLink uses a **tiered client-server architecture** with bidirectional local communication:
 
 ```
-┌──────────────────┐                    ┌──────────────────┐
-│     Android      │                    │       Mac        │
-│                  │                    │                  │
-│  ┌────────────┐ │                    │ ┌────────────┐   │
-│  │  Feature   │ │                    │ │  Feature  │   │
-│  │  Modules   │ │                    │ │  Modules  │   │
-│  └────────────┘ │                    │ └────────────┘   │
-│         │        │                    │         │        │
-│  ┌─────▼─────┐  │    Protocol Buffer │ ┌─────▼─────┐   │
-│  │ Protocol  │◄─┼─────────────────────┼─┤  Protocol │   │
-│  │   Layer   │  │     (TCP + TLS)    │ │   Layer   │   │
-│  └─────┬─────┘  │                    │ └─────┬─────┘   │
-│         │        │                    │         │        │
-│  ┌─────▼─────┐  │                    │ ┌─────▼─────┐   │
-│  │ Transport │◄─┼────── USB/Wi-Fi ───┼─┤ Transport │   │
-│  │   Layer   │  │                    │ │   Layer   │   │
-│  └────────────┘ │                    │ └────────────┘   │
-└──────────────────┘                    └──────────────────┘
+┌──────────────────┐                                 ┌──────────────────┐
+│     Android      │                                 │       Mac        │
+│                  │                                 │                  │
+│  ┌────────────┐  │                                 │  ┌────────────┐  │
+│  │  Feature   │  │                                 │  │  Feature   │  │
+│  │  Modules   │  │                                 │  │  Modules   │  │
+│  └────────────┘  │                                 │  └────────────┘  │
+│         │        │                                 │         │        │
+│  ┌─────▼─────┐   │        Protocol Buffers         │  ┌─────▼─────┐   │
+│  │ Protocol  │◄──┼─────────────────────────────────┼─►│ Protocol  │   │
+│  │   Layer   │   │                                 │  │   Layer   │   │
+│  └─────┬─────┘   │                                 │  └─────┬─────┘   │
+│         │        │                                 │         │        │
+│  ┌─────▼─────┐   │ 1. BLE (Control & Small Tasks)  │  ┌─────▼─────┐   │
+│  │ Transport │◄──┼─2. Wi-Fi Direct (High Bandwidth)┼─►│ Transport │   │
+│  │   Layer   │   │ 3. USB (AOA Wired Fallback)     │  │   Layer   │   │
+│  └────────────┘  │                                 │  └────────────┘  │
+└──────────────────┘                                 └──────────────────┘
 ```
 
 ### Key Design Decisions
 
-1. **Local-First**: All communication is device-to-device, no cloud relay
-2. **Protocol Buffers**: Binary protocol for efficiency and backward compatibility
-3. **Feature Modules**: Each feature is an independent module with clear API boundaries
-4. **Clean Architecture**: Separation of concerns with clear dependency rules
-5. **Event-Driven**: Async streams (Coroutines/Flow on Android, Combine on Mac)
+1. **Local-First & Multi-Tiered Transport**:
+   - **Bluetooth LE**: Primary connection, automatic discovery, proximity pairing, clipboard sync, and notification mirroring.
+   - **Wi-Fi Direct**: Dynamically negotiated over BLE for high-bandwidth tasks (screen mirroring, large file transfer) when needed.
+   - **USB (AOA)**: Zero-latency wired fallback.
+2. **Protocol Buffers**: Binary protocol for efficiency and backward compatibility.
+3. **Feature Modules**: Each feature is an independent module with clear API boundaries.
+4. **Clean Architecture**: Separation of concerns with clear dependency rules.
+5. **Event-Driven**: Async streams (Coroutines/Flow on Android, Swift Concurrency / Combine on Mac).
 
 ---
 
@@ -765,6 +768,47 @@ logger.log(LogEvent.PerformanceEvent("clipboard_sync", 45))
 
 ---
 
-**Status**: ✅ Architecture complete — ready for implementation
+## External Display & Zero-ADB Shizuku Architecture
 
-**Last Updated**: 2025-06-07
+```
+┌─────────────────────────────────────────────────────────────┐
+│                       macOS Host                            │
+│                                                             │
+│  CGVirtualDisplay (CoreGraphics SPI)                        │
+│      │                                                      │
+│      ▼                                                      │
+│  ScreenCaptureKit (SCStream @ 60-120 FPS)                   │
+│      │ (CMSampleBuffer / CVPixelBuffer)                     │
+│      ▼                                                      │
+│  VideoToolbox (VTCompressionSession - Hardware H.264)       │
+│      │ (Annex B NALUs: SPS/PPS + IDR/P-frames)              │
+│      ▼                                                      │
+│  TCP Server (Encrypted Length-Prefixed Protobuf)            │
+└───────────────────────────┬─────────────────────────────────┘
+                            │ Wi-Fi / USB Tethering
+┌───────────────────────────▼─────────────────────────────────┐
+│                     Android Device                          │
+│                                                             │
+│  TcpClient (Length-Prefixed Protobuf Parser)                │
+│      │                                                      │
+│      ▼                                                      │
+│  ExternalDisplayDecoder (MediaCodec Hardware H.264)         │
+│      │ (Zero-Copy GPU Surface Presentation)                 │
+│      ▼                                                      │
+│  ExternalDisplaySurfaceView (Fullscreen Immersive Activity) │
+│      │                                                      │
+│      ├── MotionEvent -> Normalized Touch / Stylus Pressure  │
+│      │   └── Dispatched back to Mac as CGEvent              │
+│      │                                                      │
+│  ShizukuManager (On-Device Shell UID 2000 Zero-ADB)         │
+│      ├── Lock 120Hz/90Hz Peak Refresh Rate                  │
+│      ├── Enforce System Bar Suppression                     │
+│      └── Persistent Display Wake Lock (svc power stayon)    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+**Status**: ✅ Architecture complete — External Display & Shizuku implemented
+
+**Last Updated**: 2026-10-21

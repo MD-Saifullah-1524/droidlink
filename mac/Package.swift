@@ -16,17 +16,22 @@ let package = Package(
         .executableTarget(
             name: "DroidLink",
             dependencies: [
-                "DroidLinkKit"
-            ],
-            path: "Sources/DroidLink"
-        ),
-        .target(
-            name: "DroidLinkKit",
-            dependencies: [
                 .product(name: "SwiftProtobuf", package: "swift-protobuf")
             ],
-            path: "DroidLinkKit/Sources",
-            exclude: ["Generated"]
+            path: "Sources",
+            exclude: [
+                "DroidLink/DroidLink.entitlements",
+                "DroidLink/Info.plist",
+                "DroidLinkFileProvider/DroidLinkFileProvider.entitlements",
+                "DroidLinkFileProvider/Info.plist"
+            ]
         ),
+        .testTarget(
+            name: "DroidLinkTests",
+            dependencies: [
+                "DroidLink"
+            ],
+            path: "Tests/DroidLinkTests"
+        )
     ]
 )

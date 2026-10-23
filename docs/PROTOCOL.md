@@ -51,43 +51,47 @@ DroidLink uses a **binary protocol built on Protocol Buffers** for efficient, ba
 
 ## Transport Layer
 
-### Connection Types
+### Multi-Tiered Transport Architecture
 
-1. **USB (Android Open Accessory)**
+DroidLink uses a tiered local-transport model designed for zero-configuration, privacy, and power efficiency:
+
+1. **Tier 1: Bluetooth Low Energy (BLE) — Control Plane & Low-Bandwidth Data**
+   - **Discovery & Pairing**: GATT-based pairing handshake using custom Service UUID (`D701D100-38F1-4F24-B1F7-3C7E9D420001`). No camera or QR code required.
+   - **Persistent Connection**: Single encrypted GATT connection with MTU 517 negotiation and automatic reconnection.
+   - **Low-Bandwidth Sync**: Universal Clipboard (text, links), Android/Mac Notification mirroring, and Heartbeat/System events.
+   - **Battery Friendly**: Negligible battery drain in background foreground service.
+
+2. **Tier 2: Wi-Fi Direct / Local Wi-Fi — High-Speed On-Demand Transport**
+   - **Triggered On-Demand**: Activated only when high-bandwidth tasks are initiated (Screen Mirroring, large File Transfers).
+   - **Zero-Setup Negotiation**: Wi-Fi Direct P2P credentials, IP endpoints, and session tokens are securely negotiated over the active BLE control plane.
+   - **Direct Device-to-Device**: Communicates directly without requiring an external Wi-Fi router.
+   - **Auto Teardown**: Automatically turns off Wi-Fi Direct radio links once high-bandwidth transfer ends, preserving battery.
+
+3. **Tier 3: USB (Android Open Accessory - AOA)**
    - Maximum speed (~200Mbps theoretical)
-   - Zero latency
-   - Works without Wi-Fi
-   - Preferred for large file transfers
+   - Zero latency wired connection
+   - Works without Wi-Fi or Bluetooth
 
-2. **Wi-Fi (Local Network)**
-   - Wireless freedom
-   - Same network requirement
-   - Supports Wi-Fi Direct (device-to-device without router)
-   - Falls back from USB when unplugged
-
-### Connection Establishment
+### Connection Establishment (Bluetooth LE)
 
 ```
-1. Device Discovery (mDNS/Bonjour)
+1. Bluetooth LE Advertising & Discovery
    │
-   ├─ Mac registers Bonjour service: _droidlink._tcp
-   │  └─ TXT record: device_id, protocol_version
+   ├─ Mac broadcasts CBPeripheralManager GATT service: D701D100-...
+   │  └─ Characteristics: Pairing (D701D101), TX (D701D102), RX (D701D103), Info (D701D104)
    │
-   └─ Android discovers service via NSD API
+   └─ Android scans via BluetoothLeScanner filtering by DROIDLINK_SERVICE_UUID
 
-2. TLS Handshake
+2. GATT Pairing Handshake
    │
-   ├─ Mac presents certificate
-   ├─ Android validates against stored fingerprint
-   ├─ Android presents certificate
-   ├─ Mac validates against stored fingerprint
-   └─ TLS 1.3 connection established
+   ├─ Android connects GATT client, requests MTU 517, subscribes to TX notifications
+   ├─ Android writes encrypted/signed JSON pairing payload to PAIRING_CHAR
+   └─ Mac saves device credentials in secure storage; AES-256-GCM session key is established
 
-3. Protocol Handshake
+3. Low-Bandwidth Streaming
    │
-   ├─ Android sends HelloMessage (protocol_version, device_info)
-   ├─ Mac responds with HelloAck (server_info, supported_features)
-   └─ Connection ready for feature messages
+   ├─ Android/Mac chunk Protobuf frames (flags + sequence + payload)
+   └─ Bidirectional streaming of Clipboard and Notification Protobuf messages
 ```
 
 ### Connection States
@@ -807,6 +811,22 @@ fun sendError(error: DroidLinkError) {
 
 ---
 
+## 7. External Display Protocol (`EXTERNAL_DISPLAY = 10`)
+
+### Overview
+Turns the Android device into a low-latency extended secondary monitor for macOS:
+- **Host (Mac)**: Generates a virtual monitor via `CGVirtualDisplay`, captures output via `ScreenCaptureKit`, encodes to H.264 using `VideoToolbox`, and streams over TCP.
+- **Client (Android)**: Decodes H.264 via `MediaCodec` directly onto a fullscreen `SurfaceView`.
+- **Zero-ADB Shizuku Integration**: Enforces 120Hz/90Hz refresh rate, persistent wake locks, and system bar suppression natively via on-device Shizuku ADB shell privileges.
+- **Remote Input**: Dispatches touch, S-Pen stylus (with pressure & tilt), and mouse events back to the Mac virtual display.
+
+### Schema: `external_display_messages.proto`
+- `ExternalDisplayConfig`: resolution (`width`, `height`), `fps`, `dpi`, `hi_dpi`, `bitrate_kbps`, `codec`, `enable_input`.
+- `ExternalDisplayFrame`: `frame_data` (Annex B NALUs), `frame_number`, `timestamp`, `is_keyframe`, `width`, `height`.
+- `ExternalDisplayInput`: `action` (DOWN, MOVE, UP, SCROLL), `tool_type` (FINGER, STYLUS, MOUSE), `normalized_x`, `normalized_y`, `pressure`, `tilt_x`, `tilt_y`, `button_state`, `scroll_dx`, `scroll_dy`.
+
+---
+
 **Status**: ✅ Protocol design complete — ready for implementation
 
-**Last Updated**: 2025-06-07
+**Last Updated**: 2026-10-21

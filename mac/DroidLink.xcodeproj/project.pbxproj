@@ -1,0 +1,706 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A1000001 /* BleChunker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001 /* BleChunker.swift */; };
+		A1000002 /* BleServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002 /* BleServer.swift */; };
+		A1000003 /* ClipboardManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000003 /* ClipboardManager.swift */; };
+		A1000004 /* CryptoChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000004 /* CryptoChannel.swift */; };
+		A1000005 /* DeviceWakeupNotifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000005 /* DeviceWakeupNotifier.swift */; };
+		A1000006 /* MacTelemetryCollector.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000006 /* MacTelemetryCollector.swift */; };
+		A1000007 /* MessageFramer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000007 /* MessageFramer.swift */; };
+		A1000008 /* NetworkUtilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000008 /* NetworkUtilities.swift */; };
+		A1000009 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000009 /* NotificationManager.swift */; };
+		A100000A /* Notifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000A /* Notifications.swift */; };
+		A100000B /* PairingStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000B /* PairingStorage.swift */; };
+		A100000C /* QRCodeGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000C /* QRCodeGenerator.swift */; };
+		A100000D /* TcpServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000D /* TcpServer.swift */; };
+		A100000E /* DroidLinkEnumerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000E /* DroidLinkEnumerator.swift */; };
+		A100000F /* DroidLinkItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000F /* DroidLinkItem.swift */; };
+		A1000011 /* FileProviderDomainManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000011 /* FileProviderDomainManager.swift */; };
+		A1000012 /* FileProviderIPC.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000012 /* FileProviderIPC.swift */; };
+		A1000014 /* clipboard.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000014 /* clipboard.pb.swift */; };
+		A1000015 /* droidlink.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000015 /* droidlink.pb.swift */; };
+		A1000016 /* file.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000016 /* file.pb.swift */; };
+		A1000017 /* media.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000017 /* media.pb.swift */; };
+		A1000018 /* notification.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000018 /* notification.pb.swift */; };
+		A1000019 /* screen.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000019 /* screen.pb.swift */; };
+		A100001A /* system.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200001A /* system.pb.swift */; };
+		A100001B /* continuity.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200001B /* continuity.pb.swift */; };
+		A1000020 /* BluetoothPairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000020 /* BluetoothPairingView.swift */; };
+		A1000021 /* ClipboardDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000021 /* ClipboardDetailView.swift */; };
+		A1000022 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000022 /* ContentView.swift */; };
+		A1000023 /* DroidLinkApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000023 /* DroidLinkApp.swift */; };
+		A1000024 /* FeaturesDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000024 /* FeaturesDetailView.swift */; };
+		A1000025 /* HomeDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000025 /* HomeDetailView.swift */; };
+		A1000027 /* NotificationsDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000027 /* NotificationsDetailView.swift */; };
+		A1000028 /* QRCodeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000028 /* QRCodeView.swift */; };
+		A1000029 /* SettingsDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000029 /* SettingsDetailView.swift */; };
+		A100002A /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200002A /* SettingsView.swift */; };
+		A100002B /* UIComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200002B /* UIComponents.swift */; };
+		A1000030 /* DroidLinkFileProviderExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000030 /* DroidLinkFileProviderExtension.swift */; };
+		A1000031 /* MessageFramer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000007 /* MessageFramer.swift */; };
+		A1000032 /* PairingStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000B /* PairingStorage.swift */; };
+		A1000033 /* FileProviderIPC.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000012 /* FileProviderIPC.swift */; };
+		A1000034 /* DroidLinkEnumerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000E /* DroidLinkEnumerator.swift */; };
+		A1000035 /* DroidLinkItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000F /* DroidLinkItem.swift */; };
+		A1000037 /* clipboard.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000014 /* clipboard.pb.swift */; };
+		A1000038 /* droidlink.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000015 /* droidlink.pb.swift */; };
+		A1000039 /* file.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000016 /* file.pb.swift */; };
+		A100003A /* media.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000017 /* media.pb.swift */; };
+		A100003B /* notification.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000018 /* notification.pb.swift */; };
+		A100003C /* screen.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000019 /* screen.pb.swift */; };
+		A100003D /* system.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200001A /* system.pb.swift */; };
+		A100003E /* continuity.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200001B /* continuity.pb.swift */; };
+		A100003F /* external_display.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200001C /* external_display.pb.swift */; };
+		A1000040 /* FileProvider.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A2000040 /* FileProvider.framework */; };
+		A1000041 /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A2000041 /* AppKit.framework */; };
+		A1000042 /* CoreBluetooth.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A2000042 /* CoreBluetooth.framework */; };
+		A1000043 /* FileProvider.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A2000040 /* FileProvider.framework */; };
+		A1000044 /* CoreBluetooth.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A2000042 /* CoreBluetooth.framework */; };
+		A1000045 /* SwiftProtobuf in Frameworks */ = {isa = PBXBuildFile; productRef = A3000001 /* SwiftProtobuf */; };
+		A1000046 /* SwiftProtobuf in Frameworks */ = {isa = PBXBuildFile; productRef = A3000002 /* SwiftProtobuf */; };
+		A1000050 /* DroidLinkFileProvider.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A2000050 /* DroidLinkFileProvider.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A1000071 /* AppsDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000071 /* AppsDetailView.swift */; };
+		A1000072 /* H264DecoderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000072 /* H264DecoderView.swift */; };
+		A1000073 /* ScreenMirrorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000073 /* ScreenMirrorView.swift */; };
+		A1000074 /* ScreenMirroringWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000074 /* ScreenMirroringWindowController.swift */; };
+		A1000075 /* ScreenAudioEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000075 /* ScreenAudioEngine.swift */; };
+		A1000076 /* ScreenMirroringManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000076 /* ScreenMirroringManager.swift */; };
+		A100001C /* external_display.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200001C /* external_display.pb.swift */; };
+		A1000077 /* ExternalDisplayDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000077 /* ExternalDisplayDetailView.swift */; };
+		A1000078 /* VirtualDisplayBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000078 /* VirtualDisplayBridge.swift */; };
+		A1000079 /* VirtualDisplayCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000079 /* VirtualDisplayCapture.swift */; };
+		A100007A /* H264EncoderEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200007A /* H264EncoderEngine.swift */; };
+		A100007B /* VirtualDisplayInputInjector.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200007B /* VirtualDisplayInputInjector.swift */; };
+		A100007C /* ExternalDisplayManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200007C /* ExternalDisplayManager.swift */; };
+		A100007D /* AoaUsbManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200007D /* AoaUsbManager.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A4000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A5000000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A6000002;
+			remoteInfo = DroidLinkFileProvider;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A7000001 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A1000050 /* DroidLinkFileProvider.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		A2000001 /* BleChunker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BleChunker.swift; sourceTree = "<group>"; };
+		A2000002 /* BleServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BleServer.swift; sourceTree = "<group>"; };
+		A2000003 /* ClipboardManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardManager.swift; sourceTree = "<group>"; };
+		A2000004 /* CryptoChannel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CryptoChannel.swift; sourceTree = "<group>"; };
+		A2000005 /* DeviceWakeupNotifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceWakeupNotifier.swift; sourceTree = "<group>"; };
+		A2000006 /* MacTelemetryCollector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacTelemetryCollector.swift; sourceTree = "<group>"; };
+		A2000007 /* MessageFramer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageFramer.swift; sourceTree = "<group>"; };
+		A2000008 /* NetworkUtilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkUtilities.swift; sourceTree = "<group>"; };
+		A2000009 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
+		A200000A /* Notifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Notifications.swift; sourceTree = "<group>"; };
+		A200000B /* PairingStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingStorage.swift; sourceTree = "<group>"; };
+		A200000C /* QRCodeGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodeGenerator.swift; sourceTree = "<group>"; };
+		A200000D /* TcpServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TcpServer.swift; sourceTree = "<group>"; };
+		A200000E /* DroidLinkEnumerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DroidLinkEnumerator.swift; sourceTree = "<group>"; };
+		A200000F /* DroidLinkItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DroidLinkItem.swift; sourceTree = "<group>"; };
+		A2000011 /* FileProviderDomainManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileProviderDomainManager.swift; sourceTree = "<group>"; };
+		A2000012 /* FileProviderIPC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileProviderIPC.swift; sourceTree = "<group>"; };
+		A2000014 /* clipboard.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = clipboard.pb.swift; sourceTree = "<group>"; };
+		A2000015 /* droidlink.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = droidlink.pb.swift; sourceTree = "<group>"; };
+		A2000016 /* file.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = file.pb.swift; sourceTree = "<group>"; };
+		A2000017 /* media.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = media.pb.swift; sourceTree = "<group>"; };
+		A2000018 /* notification.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = notification.pb.swift; sourceTree = "<group>"; };
+		A2000019 /* screen.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = screen.pb.swift; sourceTree = "<group>"; };
+		A200001A /* system.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = system.pb.swift; sourceTree = "<group>"; };
+		A200001B /* continuity.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = continuity.pb.swift; sourceTree = "<group>"; };
+		A2000020 /* BluetoothPairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BluetoothPairingView.swift; sourceTree = "<group>"; };
+		A2000021 /* ClipboardDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardDetailView.swift; sourceTree = "<group>"; };
+		A2000022 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A2000023 /* DroidLinkApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DroidLinkApp.swift; sourceTree = "<group>"; };
+		A2000024 /* FeaturesDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeaturesDetailView.swift; sourceTree = "<group>"; };
+		A2000025 /* HomeDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeDetailView.swift; sourceTree = "<group>"; };
+		A2000027 /* NotificationsDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsDetailView.swift; sourceTree = "<group>"; };
+		A2000028 /* QRCodeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodeView.swift; sourceTree = "<group>"; };
+		A2000029 /* SettingsDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsDetailView.swift; sourceTree = "<group>"; };
+		A200002A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A200002B /* UIComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIComponents.swift; sourceTree = "<group>"; };
+		A200002C /* DroidLink.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DroidLink.entitlements; sourceTree = "<group>"; };
+		A200002D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A2000030 /* DroidLinkFileProviderExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DroidLinkFileProviderExtension.swift; sourceTree = "<group>"; };
+		A2000031 /* DroidLinkFileProvider.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DroidLinkFileProvider.entitlements; sourceTree = "<group>"; };
+		A2000032 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A2000040 /* FileProvider.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FileProvider.framework; path = System/Library/Frameworks/FileProvider.framework; sourceTree = SDKROOT; };
+		A2000041 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
+		A2000042 /* CoreBluetooth.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreBluetooth.framework; path = System/Library/Frameworks/CoreBluetooth.framework; sourceTree = SDKROOT; };
+		A2000047 /* IOBluetooth.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOBluetooth.framework; path = System/Library/Frameworks/IOBluetooth.framework; sourceTree = SDKROOT; };
+		A2000050 /* DroidLinkFileProvider.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = DroidLinkFileProvider.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A2000060 /* DroidLink.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DroidLink.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A2000071 /* AppsDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppsDetailView.swift; sourceTree = "<group>"; };
+		A2000072 /* H264DecoderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = H264DecoderView.swift; sourceTree = "<group>"; };
+		A2000073 /* ScreenMirrorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenMirrorView.swift; sourceTree = "<group>"; };
+		A2000074 /* ScreenMirroringWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenMirroringWindowController.swift; sourceTree = "<group>"; };
+		A2000075 /* ScreenAudioEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenAudioEngine.swift; sourceTree = "<group>"; };
+		A2000076 /* ScreenMirroringManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenMirroringManager.swift; sourceTree = "<group>"; };
+		A200001C /* external_display.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = external_display.pb.swift; sourceTree = "<group>"; };
+		A2000077 /* ExternalDisplayDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExternalDisplayDetailView.swift; sourceTree = "<group>"; };
+		A2000078 /* VirtualDisplayBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VirtualDisplayBridge.swift; sourceTree = "<group>"; };
+		A2000079 /* VirtualDisplayCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VirtualDisplayCapture.swift; sourceTree = "<group>"; };
+		A200007A /* H264EncoderEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = H264EncoderEngine.swift; sourceTree = "<group>"; };
+		A200007B /* VirtualDisplayInputInjector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VirtualDisplayInputInjector.swift; sourceTree = "<group>"; };
+		A200007C /* ExternalDisplayManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExternalDisplayManager.swift; sourceTree = "<group>"; };
+		A200007D /* AoaUsbManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AoaUsbManager.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A8000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000040 /* FileProvider.framework in Frameworks */,
+				A1000041 /* AppKit.framework in Frameworks */,
+				A1000042 /* CoreBluetooth.framework in Frameworks */,
+				A1000047 /* IOBluetooth.framework in Frameworks */,
+				A1000045 /* SwiftProtobuf in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A8000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000043 /* FileProvider.framework in Frameworks */,
+				A1000044 /* CoreBluetooth.framework in Frameworks */,
+				A1000046 /* SwiftProtobuf in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A9000000 = {
+			isa = PBXGroup;
+			children = (
+				A9000001 /* DroidLink (App) */,
+				A9000002 /* DroidLinkKit */,
+				A9000003 /* DroidLinkFileProvider (Extension) */,
+				A9000004 /* Frameworks */,
+				A9000005 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A9000001 /* DroidLink (App) */ = {
+			isa = PBXGroup;
+			children = (
+				A2000020 /* BluetoothPairingView.swift */,
+				A2000021 /* ClipboardDetailView.swift */,
+				A2000022 /* ContentView.swift */,
+				A2000023 /* DroidLinkApp.swift */,
+				A2000024 /* FeaturesDetailView.swift */,
+				A2000025 /* HomeDetailView.swift */,
+				A2000027 /* NotificationsDetailView.swift */,
+				A2000028 /* QRCodeView.swift */,
+				A2000029 /* SettingsDetailView.swift */,
+				A200002A /* SettingsView.swift */,
+				A200002B /* UIComponents.swift */,
+				A2000071 /* AppsDetailView.swift */,
+				A2000072 /* H264DecoderView.swift */,
+				A2000073 /* ScreenMirrorView.swift */,
+				A2000074 /* ScreenMirroringWindowController.swift */,
+				A2000077 /* ExternalDisplayDetailView.swift */,
+				A200002C /* DroidLink.entitlements */,
+				A200002D /* Info.plist */,
+			);
+			name = "DroidLink (App)";
+			path = Sources/DroidLink;
+			sourceTree = "<group>";
+		};
+		A9000002 /* DroidLinkKit */ = {
+			isa = PBXGroup;
+			children = (
+				A9000010 /* Bluetooth */,
+				A9000011 /* FileProvider */,
+				A9000012 /* Generated */,
+				A2000003 /* ClipboardManager.swift */,
+				A2000004 /* CryptoChannel.swift */,
+				A2000005 /* DeviceWakeupNotifier.swift */,
+				A2000006 /* MacTelemetryCollector.swift */,
+				A2000007 /* MessageFramer.swift */,
+				A2000008 /* NetworkUtilities.swift */,
+				A2000009 /* NotificationManager.swift */,
+				A200000A /* Notifications.swift */,
+				A200000B /* PairingStorage.swift */,
+				A200000C /* QRCodeGenerator.swift */,
+				A200000D /* TcpServer.swift */,
+				A2000075 /* ScreenAudioEngine.swift */,
+				A2000076 /* ScreenMirroringManager.swift */,
+				A2000078 /* VirtualDisplayBridge.swift */,
+				A2000079 /* VirtualDisplayCapture.swift */,
+				A200007A /* H264EncoderEngine.swift */,
+				A200007B /* VirtualDisplayInputInjector.swift */,
+				A200007C /* ExternalDisplayManager.swift */,
+				A200007D /* AoaUsbManager.swift */,
+			);
+			name = DroidLinkKit;
+			path = Sources/DroidLinkKit;
+			sourceTree = "<group>";
+		};
+		A9000003 /* DroidLinkFileProvider (Extension) */ = {
+			isa = PBXGroup;
+			children = (
+				A2000030 /* DroidLinkFileProviderExtension.swift */,
+				A2000031 /* DroidLinkFileProvider.entitlements */,
+				A2000032 /* Info.plist */,
+			);
+			name = "DroidLinkFileProvider (Extension)";
+			path = Sources/DroidLinkFileProvider;
+			sourceTree = "<group>";
+		};
+		A9000004 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				A2000040 /* FileProvider.framework */,
+				A2000041 /* AppKit.framework */,
+				A2000042 /* CoreBluetooth.framework */,
+				A2000047 /* IOBluetooth.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		A9000005 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A2000060 /* DroidLink.app */,
+				A2000050 /* DroidLinkFileProvider.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A9000010 /* Bluetooth */ = {
+			isa = PBXGroup;
+			children = (
+				A2000001 /* BleChunker.swift */,
+				A2000002 /* BleServer.swift */,
+			);
+			path = Bluetooth;
+			sourceTree = "<group>";
+		};
+		A9000011 /* FileProvider */ = {
+			isa = PBXGroup;
+			children = (
+				A200000E /* DroidLinkEnumerator.swift */,
+				A200000F /* DroidLinkItem.swift */,
+				A2000011 /* FileProviderDomainManager.swift */,
+				A2000012 /* FileProviderIPC.swift */,
+			);
+			path = FileProvider;
+			sourceTree = "<group>";
+		};
+		A9000012 /* Generated */ = {
+			isa = PBXGroup;
+			children = (
+				A2000014 /* clipboard.pb.swift */,
+				A2000015 /* droidlink.pb.swift */,
+				A2000016 /* file.pb.swift */,
+				A2000017 /* media.pb.swift */,
+				A2000018 /* notification.pb.swift */,
+				A2000019 /* screen.pb.swift */,
+				A200001A /* system.pb.swift */,
+				A200001B /* continuity.pb.swift */,
+				A200001C /* external_display.pb.swift */,
+			);
+			path = Generated;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A6000001 /* DroidLink */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AB000001 /* Build configuration list for PBXNativeTarget "DroidLink" */;
+			buildPhases = (
+				AC000001 /* Sources */,
+				A8000001 /* Frameworks */,
+				A7000001 /* Embed App Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AA000001 /* PBXTargetDependency */,
+			);
+			name = DroidLink;
+			packageProductDependencies = (
+				A3000001 /* SwiftProtobuf */,
+			);
+			productName = DroidLink;
+			productReference = A2000060 /* DroidLink.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A6000002 /* DroidLinkFileProvider */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AB000002 /* Build configuration list for PBXNativeTarget "DroidLinkFileProvider" */;
+			buildPhases = (
+				AC000002 /* Sources */,
+				A8000002 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DroidLinkFileProvider;
+			packageProductDependencies = (
+				A3000002 /* SwiftProtobuf */,
+			);
+			productName = DroidLinkFileProvider;
+			productReference = A2000050 /* DroidLinkFileProvider.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A5000000 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					A6000001 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					A6000002 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = AB000000 /* Build configuration list for PBXProject "DroidLink" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A9000000;
+			packageReferences = (
+				AD000001 /* XCRemoteSwiftPackageReference "swift-protobuf" */,
+			);
+			productRefGroup = A9000005 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A6000001 /* DroidLink */,
+				A6000002 /* DroidLinkFileProvider */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AC000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000020 /* BluetoothPairingView.swift in Sources */,
+				A1000021 /* ClipboardDetailView.swift in Sources */,
+				A1000022 /* ContentView.swift in Sources */,
+				A1000023 /* DroidLinkApp.swift in Sources */,
+				A1000024 /* FeaturesDetailView.swift in Sources */,
+				A1000025 /* HomeDetailView.swift in Sources */,
+				A1000027 /* NotificationsDetailView.swift in Sources */,
+				A1000028 /* QRCodeView.swift in Sources */,
+				A1000029 /* SettingsDetailView.swift in Sources */,
+				A100002A /* SettingsView.swift in Sources */,
+				A100002B /* UIComponents.swift in Sources */,
+				A1000001 /* BleChunker.swift in Sources */,
+				A1000002 /* BleServer.swift in Sources */,
+				A1000003 /* ClipboardManager.swift in Sources */,
+				A1000004 /* CryptoChannel.swift in Sources */,
+				A1000005 /* DeviceWakeupNotifier.swift in Sources */,
+				A1000006 /* MacTelemetryCollector.swift in Sources */,
+				A1000007 /* MessageFramer.swift in Sources */,
+				A1000008 /* NetworkUtilities.swift in Sources */,
+				A1000009 /* NotificationManager.swift in Sources */,
+				A100000A /* Notifications.swift in Sources */,
+				A100000B /* PairingStorage.swift in Sources */,
+				A100000C /* QRCodeGenerator.swift in Sources */,
+				A100000D /* TcpServer.swift in Sources */,
+				A100000E /* DroidLinkEnumerator.swift in Sources */,
+				A100000F /* DroidLinkItem.swift in Sources */,
+				A1000011 /* FileProviderDomainManager.swift in Sources */,
+				A1000012 /* FileProviderIPC.swift in Sources */,
+				A1000014 /* clipboard.pb.swift in Sources */,
+				A1000015 /* droidlink.pb.swift in Sources */,
+				A1000016 /* file.pb.swift in Sources */,
+				A1000017 /* media.pb.swift in Sources */,
+				A1000018 /* notification.pb.swift in Sources */,
+				A1000019 /* screen.pb.swift in Sources */,
+				A100001A /* system.pb.swift in Sources */,
+				A100001B /* continuity.pb.swift in Sources */,
+				A1000071 /* AppsDetailView.swift in Sources */,
+				A1000072 /* H264DecoderView.swift in Sources */,
+				A1000073 /* ScreenMirrorView.swift in Sources */,
+				A1000074 /* ScreenMirroringWindowController.swift in Sources */,
+				A1000075 /* ScreenAudioEngine.swift in Sources */,
+				A1000076 /* ScreenMirroringManager.swift in Sources */,
+				A100001C /* external_display.pb.swift in Sources */,
+				A1000077 /* ExternalDisplayDetailView.swift in Sources */,
+				A1000078 /* VirtualDisplayBridge.swift in Sources */,
+				A1000079 /* VirtualDisplayCapture.swift in Sources */,
+				A100007A /* H264EncoderEngine.swift in Sources */,
+				A100007B /* VirtualDisplayInputInjector.swift in Sources */,
+				A100007C /* ExternalDisplayManager.swift in Sources */,
+				A100007D /* AoaUsbManager.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AC000002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000030 /* DroidLinkFileProviderExtension.swift in Sources */,
+				A1000031 /* MessageFramer.swift in Sources */,
+				A1000032 /* PairingStorage.swift in Sources */,
+				A1000033 /* FileProviderIPC.swift in Sources */,
+				A1000034 /* DroidLinkEnumerator.swift in Sources */,
+				A1000035 /* DroidLinkItem.swift in Sources */,
+				A1000037 /* clipboard.pb.swift in Sources */,
+				A1000038 /* droidlink.pb.swift in Sources */,
+				A1000039 /* file.pb.swift in Sources */,
+				A100003A /* media.pb.swift in Sources */,
+				A100003B /* notification.pb.swift in Sources */,
+				A100003C /* screen.pb.swift in Sources */,
+				A100003D /* system.pb.swift in Sources */,
+				A100003E /* continuity.pb.swift in Sources */,
+				A100003F /* external_display.pb.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AA000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A6000002 /* DroidLinkFileProvider */;
+			targetProxy = A4000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		AE000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 79;
+				MARKETING_VERSION = 1.1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		AE000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 79;
+				MARKETING_VERSION = 1.1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+			name = Release;
+		};
+		AE000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Sources/DroidLink/DroidLink.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 79;
+				MARKETING_VERSION = 1.1;
+				DEVELOPMENT_TEAM = CFV38KGZ97;
+				ENABLE_HARDENED_RUNTIME = NO;
+				INFOPLIST_FILE = Sources/DroidLink/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.droidlink.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		AE000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Sources/DroidLink/DroidLink.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 79;
+				MARKETING_VERSION = 1.1;
+				DEVELOPMENT_TEAM = CFV38KGZ97;
+				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = Sources/DroidLink/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.droidlink.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		AE000005 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Sources/DroidLinkFileProvider/DroidLinkFileProvider.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 79;
+				MARKETING_VERSION = 1.1;
+				DEVELOPMENT_TEAM = CFV38KGZ97;
+				ENABLE_HARDENED_RUNTIME = NO;
+				INFOPLIST_FILE = Sources/DroidLinkFileProvider/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.droidlink.app.FileProvider;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		AE000006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Sources/DroidLinkFileProvider/DroidLinkFileProvider.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 79;
+				MARKETING_VERSION = 1.1;
+				DEVELOPMENT_TEAM = CFV38KGZ97;
+				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = Sources/DroidLinkFileProvider/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.droidlink.app.FileProvider;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AB000000 /* Build configuration list for PBXProject "DroidLink" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AE000001 /* Debug */,
+				AE000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AB000001 /* Build configuration list for PBXNativeTarget "DroidLink" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AE000003 /* Debug */,
+				AE000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AB000002 /* Build configuration list for PBXNativeTarget "DroidLinkFileProvider" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AE000005 /* Debug */,
+				AE000006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		AD000001 /* XCRemoteSwiftPackageReference "swift-protobuf" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-protobuf.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.25.3;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A3000001 /* SwiftProtobuf */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AD000001 /* XCRemoteSwiftPackageReference "swift-protobuf" */;
+			productName = SwiftProtobuf;
+		};
+		A3000002 /* SwiftProtobuf */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AD000001 /* XCRemoteSwiftPackageReference "swift-protobuf" */;
+			productName = SwiftProtobuf;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = A5000000 /* Project object */;
+}

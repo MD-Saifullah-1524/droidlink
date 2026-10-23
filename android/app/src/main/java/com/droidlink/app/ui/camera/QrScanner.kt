@@ -7,18 +7,22 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.Executors
 
 /**
- * Camera preview with QR code detection
+ * Camera preview with single-shot QR code detection (debounced)
  */
 @Composable
 fun QrScanner(
@@ -26,7 +30,9 @@ fun QrScanner(
     modifier: Modifier = Modifier
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
+    var hasDetected by remember { mutableStateOf(false) }
+
     val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
     val barcodeScanner = remember {
         val options = BarcodeScannerOptions.Builder()
@@ -39,38 +45,42 @@ fun QrScanner(
     AndroidView(
         factory = { ctx ->
             val previewView = PreviewView(ctx)
-            
             val mainExecutor = context.mainExecutor
-            
+
             cameraProviderFuture.addListener({
                 val cameraProvider = cameraProviderFuture.get()
-                
-                // Preview
-                val preview = Preview.Builder()
-                    .build()
-                    .also {
-                        it.setSurfaceProvider(previewView.surfaceProvider)
-                    }
-                
-                // Image analysis for QR detection
+
+                val preview = Preview.Builder().build().also {
+                    it.setSurfaceProvider(previewView.surfaceProvider)
+                }
+
                 val imageAnalysis = ImageAnalysis.Builder()
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build()
-                    .also {
-                        it.setAnalyzer(executor) { imageProxy ->
+                    .also { analysis ->
+                        analysis.setAnalyzer(executor) { imageProxy ->
+                            if (hasDetected) {
+                                imageProxy.close()
+                                return@setAnalyzer
+                            }
+
                             @androidx.camera.core.ExperimentalGetImage
                             val mediaImage = imageProxy.image
                             if (mediaImage != null) {
-                                val image = com.google.mlkit.vision.common.InputImage.fromMediaImage(
+                                val image = InputImage.fromMediaImage(
                                     mediaImage,
                                     imageProxy.imageInfo.rotationDegrees
                                 )
-                                
+
                                 barcodeScanner.process(image)
                                     .addOnSuccessListener { barcodes ->
+                                        if (hasDetected) return@addOnSuccessListener
                                         for (barcode in barcodes) {
-                                            barcode.rawValue?.let { qrValue ->
-                                                onQrCodeDetected(qrValue)
+                                            val rawValue = barcode.rawValue
+                                            if (!rawValue.isNullOrBlank()) {
+                                                hasDetected = true
+                                                onQrCodeDetected(rawValue)
+                                                break
                                             }
                                         }
                                     }
@@ -85,15 +95,12 @@ fun QrScanner(
                             }
                         }
                     }
-                
-                // Camera selector (back camera)
-                val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-                
+
                 try {
                     cameraProvider.unbindAll()
                     cameraProvider.bindToLifecycle(
                         lifecycleOwner,
-                        cameraSelector,
+                        CameraSelector.DEFAULT_BACK_CAMERA,
                         preview,
                         imageAnalysis
                     )
@@ -101,7 +108,7 @@ fun QrScanner(
                     android.util.Log.e("QrScanner", "Camera binding failed", e)
                 }
             }, mainExecutor)
-            
+
             previewView
         },
         modifier = modifier.fillMaxSize()

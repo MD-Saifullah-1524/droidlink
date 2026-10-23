@@ -7,8 +7,9 @@ import "notification_messages.proto";
 import "file_messages.proto";
 import "screen_messages.proto";
 import "media_messages.proto";
-import "call_messages.proto";
 import "system_messages.proto";
+import "continuity_messages.proto";
+import "external_display_messages.proto";
 
 // Root message type for all DroidLink communication
 message DroidLinkMessage {
@@ -22,9 +23,12 @@ message DroidLinkMessage {
     FileMessage file = 12;
     ScreenMessage screen = 13;
     MediaMessage media = 14;
-    CallMessage call = 15;
     SystemMessage system = 16;
+    ContinuityMessage continuity = 17;
+    ExternalDisplayMessage external_display = 18;
   }
+
+  reserved 15, 19 to 21;
 }
 
 enum MessageType {
@@ -35,6 +39,9 @@ enum MessageType {
   SCREEN_STREAM = 4;
   WEBCAM_STREAM = 5;
   AUDIO_STREAM = 6;
-  CALL_EVENT = 7;
   SYSTEM = 8;
+  CONTINUITY = 9;
+  EXTERNAL_DISPLAY = 10;
+
+  reserved 7, 11 to 13;
 }

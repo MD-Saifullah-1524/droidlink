@@ -4,46 +4,88 @@ package droidlink.protocol;
 
 option java_outer_classname = "FileProto";
 
-// File transfer messages
+// File transfer and FileProvider messages
 message FileMessage {
   enum FileOperation {
     FILE_UNKNOWN = 0;
-    LIST_REQUEST = 1;              // Request file listing
-    LIST_RESPONSE = 2;             // File listing
-    DOWNLOAD_REQUEST = 3;          // Request download
-    DOWNLOAD_RESPONSE = 4;         // File chunk
-    UPLOAD_REQUEST = 5;            // Push file
-    UPLOAD_RESPONSE = 6;           // Acknowledge upload
-    DELETE = 7;                    // Delete file
+    LIST_REQUEST = 1;              // Request file listing (legacy)
+    LIST_RESPONSE = 2;             // File listing (legacy)
+    DOWNLOAD_REQUEST = 3;          // Request download (legacy)
+    DOWNLOAD_RESPONSE = 4;         // File chunk (legacy)
+    UPLOAD_REQUEST = 5;            // Push file (legacy)
+    UPLOAD_RESPONSE = 6;           // Acknowledge upload (legacy)
+    DELETE = 7;                    // Delete file (legacy)
     FILE_ERROR = 8;                // Error response
+
+    // macOS FileProvider operations
+    ENUM_DIRECTORY_REQUEST = 9;    // Enumerate children of a directory
+    ENUM_DIRECTORY_RESPONSE = 10;   // Directory contents response (paginated)
+    GET_METADATA_REQUEST = 11;     // Fetch single item metadata (stat)
+    GET_METADATA_RESPONSE = 12;    // Single item metadata response
+    READ_CHUNK_REQUEST = 13;       // Read chunk at 64-bit offset
+    READ_CHUNK_RESPONSE = 14;      // Chunk data at 64-bit offset
+    WRITE_CHUNK_REQUEST = 15;      // Write chunk at 64-bit offset
+    WRITE_CHUNK_RESPONSE = 16;     // Chunk written ack
+    CREATE_ITEM_REQUEST = 17;      // Create file or folder
+    CREATE_ITEM_RESPONSE = 18;     // Item created ack with FileInfo
+    DELETE_ITEM_REQUEST = 19;      // Delete file or folder
+    DELETE_ITEM_RESPONSE = 20;     // Delete completed ack
+    MOVE_ITEM_REQUEST = 21;        // Rename or move item
+    MOVE_ITEM_RESPONSE = 22;       // Move completed ack
+    SUBSCRIBE_CHANGES_REQUEST = 23; // Subscribe to directory file events
+    FILE_CHANGE_EVENT = 24;        // Push notification of remote change
+  }
+
+  enum ChangeType {
+    CHANGE_UNKNOWN = 0;
+    CHANGE_CREATED = 1;
+    CHANGE_MODIFIED = 2;
+    CHANGE_DELETED = 3;
+    CHANGE_RENAMED = 4;
   }
 
   FileOperation operation = 1;
 
-  // For LIST_REQUEST, DOWNLOAD_REQUEST
+  // Path relative to user storage (/storage/emulated/0), e.g. "Documents/Report.pdf" or "" for root
   string file_path = 2;
 
-  // For LIST_RESPONSE
+  // For LIST_RESPONSE and ENUM_DIRECTORY_RESPONSE
   repeated FileInfo files = 3;
 
-  // For DOWNLOAD_REQUEST, DOWNLOAD_RESPONSE
+  // For DOWNLOAD_REQUEST, DOWNLOAD_RESPONSE, READ_CHUNK_RESPONSE
   int64 file_size = 4;
   string mime_type = 5;
   bytes file_data = 6;             // Chunked data
   int32 chunk_index = 7;           // Chunk number (0-based)
-  int32 total_chunks = 8;          // Total chunks
-  string file_id = 9;              // Unique transfer ID
+  int32 total_chunks = 8;          // Total chunks (if known)
+  string file_id = 9;              // Unique transfer or item ID
 
   // For ERROR
   string error_message = 10;
+
+  // 64-bit streaming & FileProvider extensions
+  int64 offset = 11;               // 64-bit byte offset in file (no 4 GB limit)
+  int32 chunk_size = 12;           // Requested or actual chunk length (adaptive: 512KB to 8MB)
+  bool is_eof = 13;                // True if last chunk of the file
+  string etag = 14;                // Content version hash or <mtime>_<size>
+  string target_path = 15;         // Destination relative path for MOVE / RENAME
+  string page_token = 16;          // Cursor for directory pagination
+  string next_page_token = 17;     // Next cursor (empty if last page)
+  bool is_directory = 18;          // For CREATE_ITEM_REQUEST
+  ChangeType change_type = 19;     // For FILE_CHANGE_EVENT
+  FileInfo file_info = 20;         // Single item metadata
 }
 
-// File information
+// File and directory metadata
 message FileInfo {
-  string name = 1;
-  string path = 2;
-  int64 size = 3;
-  int64 modified_time = 4;
-  bool is_directory = 5;
-  string mime_type = 6;
+  string name = 1;                 // Display name, e.g. "photo.jpg"
+  string path = 2;                 // Relative path from user storage, e.g. "DCIM/Camera/photo.jpg"
+  int64 size = 3;                  // File size in bytes (0 for directory)
+  int64 modified_time = 4;         // Modification time (Unix ms)
+  bool is_directory = 5;           // True if directory
+  string mime_type = 6;            // MIME type, e.g. "image/jpeg"
+  int64 creation_time = 7;         // Creation time (Unix ms)
+  bool is_read_only = 8;           // True if item cannot be modified (e.g. system dirs)
+  string etag = 9;                 // Version tag
+  string id = 10;                  // Unique item identifier for FileProvider (normalized path)
 }

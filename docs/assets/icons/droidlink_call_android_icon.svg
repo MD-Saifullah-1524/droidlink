@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <filter id="callDroidShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#000000" flood-opacity="0.45" />
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.30" />
+    </filter>
+
+    <linearGradient id="callDroidBg" x1="10%" y1="10%" x2="90%" y2="90%">
+      <stop offset="0%" stop-color="#14261D" />
+      <stop offset="50%" stop-color="#0C1A13" />
+      <stop offset="100%" stop-color="#050E09" />
+    </linearGradient>
+
+    <linearGradient id="callDroidPhone" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3CEB73" />
+      <stop offset="50%" stop-color="#30D158" />
+      <stop offset="100%" stop-color="#19993C" />
+    </linearGradient>
+
+    <linearGradient id="callDroidWaves" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00F5A0" />
+      <stop offset="50%" stop-color="#00E5FF" />
+      <stop offset="100%" stop-color="#0A84FF" />
+    </linearGradient>
+
+    <radialGradient id="callDroidGlow" cx="45%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#30D158" stop-opacity="0.32" />
+      <stop offset="100%" stop-color="#30D158" stop-opacity="0" />
+    </radialGradient>
+
+    <linearGradient id="callDroidGleam" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.45" />
+      <stop offset="40%" stop-color="#FFFFFF" stop-opacity="0.05" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
+    </linearGradient>
+
+    <clipPath id="callDroidSquircle">
+      <rect x="32" y="32" width="448" height="448" rx="100" ry="100" />
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#callDroidSquircle)">
+    <rect x="0" y="0" width="512" height="512" fill="url(#callDroidBg)" />
+    <rect x="0" y="0" width="512" height="512" fill="url(#callDroidGlow)" />
+
+    <!-- Circuit/Radar ring -->
+    <g opacity="0.06" stroke="#FFFFFF" stroke-width="1.2">
+      <circle cx="256" cy="256" r="180" fill="none" stroke-dasharray="6 8" />
+      <circle cx="256" cy="256" r="215" fill="none" />
+    </g>
+
+    <!-- DEAD-CENTERED CALL GLYPH (Optical center at 256, 256) -->
+    <g filter="url(#callDroidShadow)" transform="translate(256 256) scale(0.50) translate(-488 -520)">
+      
+      <!-- Handset -->
+      <path d="M 390 270 
+               C 425 240 475 245 505 280 
+               L 535 315 
+               C 555 340 550 375 525 398 
+               L 475 440 
+               C 465 450 462 465 470 478 
+               C 495 522 532 559 576 584 
+               C 589 592 604 589 614 579 
+               L 656 529 
+               C 679 504 714 499 739 519 
+               L 774 549 
+               C 809 579 814 629 784 664 
+               L 750 704 
+               C 720 739 670 754 625 734 
+               C 460 660 350 540 280 380 
+               C 260 335 275 285 310 255 
+               Z" 
+            fill="url(#callDroidPhone)" />
+
+      <!-- Bevel Highlight -->
+      <path d="M 390 270 
+               C 425 240 475 245 505 280 
+               L 535 315 
+               C 555 340 550 375 525 398 
+               L 475 440 
+               C 465 450 462 465 470 478 
+               C 495 522 532 559 576 584 
+               C 589 592 604 589 614 579 
+               L 656 529 
+               C 679 504 714 499 739 519 
+               L 774 549 
+               C 809 579 814 629 784 664 
+               L 750 704 
+               C 720 739 670 754 625 734 
+               C 460 660 350 540 280 380 
+               C 260 335 275 285 310 255 
+               Z" 
+            fill="none" stroke="url(#callDroidGleam)" stroke-width="8" opacity="0.55" />
+
+      <!-- Acoustic Bridge Waves -->
+      <g stroke="url(#callDroidWaves)" stroke-linecap="round" fill="none">
+        <path d="M 590 390 C 640 435 640 495 590 540" stroke-width="26" />
+        <path d="M 660 320 C 745 390 745 530 660 600" stroke-width="24" />
+        <path d="M 730 250 C 850 345 850 575 730 670" stroke-width="22" stroke-dasharray="140 18 200 0" />
+      </g>
+
+      <g transform="translate(712 460)">
+        <circle cx="0" cy="0" r="22" fill="url(#callDroidWaves)" opacity="0.6" />
+        <circle cx="0" cy="0" r="8" fill="#FFFFFF" />
+      </g>
+
+      <g stroke="#00F5A0" stroke-width="14" stroke-linecap="round">
+        <line x1="775" y1="285" x2="815" y2="235" />
+      </g>
+      <circle cx="818" cy="231" r="8" fill="#FFFFFF" />
+    </g>
+
+    <!-- Rim Stroke -->
+    <rect x="33" y="33" width="446" height="446" rx="99" ry="99" fill="none" stroke="#FFFFFF" stroke-opacity="0.1" stroke-width="1.5" />
+  </g>
+</svg>

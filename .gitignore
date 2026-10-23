@@ -1,13 +1,16 @@
 # Android
 *.iml
 .gradle
+.gradle/
+**/build/
+build/
 /local.properties
 /.idea/
 *.hprof
 *.log
+*.jsonl
 .DS_Store
 Thumbs.db
-/build
 /captures
 .externalNativeBuild
 .cxx
@@ -36,6 +39,10 @@ local.properties
 *.pyc
 .build/
 DerivedData/
+.derivedData/
+*.app/
+*.pkg
+.pkg_staging/
 *.moved-aside
 *.xcuserstate
 project.xcworkspace/

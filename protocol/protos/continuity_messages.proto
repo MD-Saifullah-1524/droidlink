@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package droidlink.protocol;
+
+option java_outer_classname = "ContinuityProto";
+
+// Root message for Continuity features between macOS and Android
+message ContinuityMessage {
+  enum Submodule {
+    SUBMODULE_UNKNOWN = 0;
+    UNIVERSAL_MOUSE = 1;
+  }
+  Submodule submodule = 1;
+
+  oneof payload {
+    UniversalMouseMessage mouse = 10;
+  }
+}
+
+// Universal Mouse continuity message
+message UniversalMouseMessage {
+  enum Action {
+    ACTION_UNKNOWN = 0;
+    CURSOR_PEEK = 1;         // Resistance peek: user is pushing cursor against the edge
+    CURSOR_ENTER = 2;        // Cursor entered Android
+    CURSOR_MOVE = 3;         // Move cursor on Android (dx, dy or absolute ratio)
+    MOUSE_BUTTON = 4;        // Mouse button event (down / up)
+    MOUSE_SCROLL = 5;        // Scroll wheel event (dx, dy)
+    KEY_EVENT = 6;           // Keyboard key press / release
+    CURSOR_EXIT = 7;         // Cursor returning to Mac (sent by Android)
+    CONFIG_UPDATE = 8;       // Edge configuration change
+    DEVICE_LOCK_STATE = 9;   // Android lock status changed
+  }
+  Action action = 1;
+
+  enum ScreenEdge {
+    EDGE_RIGHT = 0;
+    EDGE_LEFT = 1;
+    EDGE_TOP = 2;
+    EDGE_BOTTOM = 3;
+  }
+  ScreenEdge edge = 2;
+
+  // Normalized position [0.0, 1.0]
+  float x = 3;
+  float y = 4;
+
+  // Relative movement deltas
+  float delta_x = 5;
+  float delta_y = 6;
+
+  // Peek progress [0.0, 1.0] for elastic resistance visual feedback
+  float peek_progress = 7;
+
+  // Mouse button
+  enum MouseButton {
+    BUTTON_LEFT = 0;
+    BUTTON_RIGHT = 1;
+    BUTTON_MIDDLE = 2;
+  }
+  MouseButton button = 8;
+
+  enum ButtonState {
+    BUTTON_DOWN = 0;
+    BUTTON_UP = 1;
+  }
+  ButtonState button_state = 9;
+
+  // Scroll deltas
+  float scroll_dx = 10;
+  float scroll_dy = 11;
+
+  // Key event
+  int32 key_code = 12;
+  string key_chars = 13;
+  bool is_key_down = 14;
+  int32 meta_state = 16;
+
+  // Device lock state
+  bool is_locked = 15;
+}

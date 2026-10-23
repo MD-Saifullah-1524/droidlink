@@ -13,6 +13,7 @@ message SystemMessage {
     HEARTBEAT = 3;       // Keep-alive ping
     GOODBYE = 4;         // Graceful disconnect
     SYS_ERROR = 5;       // Error notification
+    DEVICE_STATUS = 6;   // Device status & telemetry (battery, network, cellular, SIM)
   }
 
   SystemEventType event = 1;
@@ -23,8 +24,46 @@ message SystemMessage {
   // For HELLO_ACK
   HelloAckMessage hello_ack = 11;
 
-  // For ERROR
+  // For ERROR / Status telemetry payload
   ErrorMessage error = 12;
+}
+
+// Device Status and Telemetry message (serialized in payload or error.details)
+message DeviceStatusMessage {
+  string device_name = 1;
+  string device_model = 2;
+  BatteryInfo battery = 3;
+  NetworkInfo network = 4;
+  CellularInfo cellular = 5;
+  repeated SimCardInfo sim_cards = 6;
+}
+
+message BatteryInfo {
+  int32 percentage = 1;         // 0 - 100
+  bool is_charging = 2;
+  string power_source = 3;      // "Battery", "AC", "USB", "Wireless"
+}
+
+message NetworkInfo {
+  string connection_type = 1;   // "Wi-Fi", "Ethernet", "Cellular", "None"
+  string wifi_ssid = 2;
+  int32 wifi_signal_level = 3;  // 0 - 4
+  int32 wifi_rssi = 4;          // dBm
+}
+
+message CellularInfo {
+  bool has_cellular = 1;
+  string carrier_name = 2;      // e.g., "T-Mobile", "Verizon", "Jio"
+  string network_type = 3;      // e.g., "5G", "4G LTE"
+  int32 signal_level = 4;       // 0 - 4 bars
+  int32 signal_dbm = 5;
+}
+
+message SimCardInfo {
+  int32 slot_index = 1;
+  string carrier_name = 2;
+  string display_name = 3;
+  string state = 4;             // "Ready", "Absent"
 }
 
 // Initial handshake message from client

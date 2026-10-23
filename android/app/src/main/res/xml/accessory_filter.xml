@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="accessory_filter_manufacturer" translatable="false">DroidLink</string>
-    <string name="accessory_filter_model" translatable="false">DroidLinkMac</string>
+    <usb-accessory
+        manufacturer="DroidLink"
+        model="DroidLink Display"
+        version="1.0" />
+    <usb-accessory
+        manufacturer="DroidLink"
+        model="DroidLinkMac" />
 </resources>

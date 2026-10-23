@@ -9,9 +9,10 @@ class DroidLinkApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         
-        // Initialize components
-        // TODO: Initialize notification manager
-        // TODO: Initialize certificate manager
-        // TODO: Check and request permissions
+        // Start UDP beacon listener for wireless Mac discovery & remote wake-up
+        com.droidlink.app.discovery.UdpBeaconListener.start(this)
+
+        // Initialize Shizuku manager for Zero-ADB privileged display optimizations
+        com.droidlink.app.shizuku.ShizukuManager.init()
     }
 }

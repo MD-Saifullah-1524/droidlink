@@ -1,96 +1,130 @@
 package com.droidlink.core.clipboard
 
 import android.content.ClipData
-import android.content.ClipboardManager
+import android.content.ClipboardManager as SystemClipboardManager
 import android.content.Context
 import android.util.Log
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
 
 /**
- * Clipboard manager that monitors changes and syncs to remote device
+ * Modern event-driven Clipboard manager for Android 15+ using OnPrimaryClipChangedListener
  */
 class ClipboardManager(
     private val context: Context,
     private val onClipboardChanged: (String) -> Unit
 ) {
-    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val clipboard: SystemClipboardManager =
+        context.getSystemService(Context.CLIPBOARD_SERVICE) as SystemClipboardManager
+
+    var isIncognitoMode: Boolean = false
+    var autoIgnoreSensitive: Boolean = true
+
     private var lastContent: String = ""
-    private var isMonitoring = false
-    
+    private var isListening = false
+
+    private val clipListener = SystemClipboardManager.OnPrimaryClipChangedListener {
+        handleClipChanged()
+    }
+
     companion object {
         private const val TAG = "ClipboardManager"
-        private const val CHECK_INTERVAL_MS = 500L
+        const val EXTRA_IS_SENSITIVE = "android.content.extra.IS_SENSITIVE"
+        const val EXTRA_PRIVATE_BROWSING = "com.android.browser.private_browsing"
+        const val EXTRA_CHROMIUM_INCOGNITO = "org.chromium.chrome.browser.incognito"
+        const val EXTRA_VENDOR_SENSITIVE = "is_sensitive"
     }
-    
+
     /**
-     * Start monitoring clipboard changes
+     * Checks if the clip contains sensitive data or was copied from an incognito/private session
+     */
+    private fun isSensitiveClip(clip: ClipData): Boolean {
+        val description = clip.description ?: return false
+        val extras = description.extras ?: return false
+
+        if (extras.getBoolean(EXTRA_IS_SENSITIVE, false)) return true
+        if (extras.getBoolean(EXTRA_PRIVATE_BROWSING, false)) return true
+        if (extras.getBoolean(EXTRA_CHROMIUM_INCOGNITO, false)) return true
+        if (extras.getBoolean(EXTRA_VENDOR_SENSITIVE, false)) return true
+
+        return false
+    }
+
+    /**
+     * Starts listening for system clipboard changes
      */
     fun startMonitoring() {
-        if (isMonitoring) {
-            Log.w(TAG, "Already monitoring clipboard")
-            return
-        }
-        
-        Log.d(TAG, "📋 Starting clipboard monitoring")
-        isMonitoring = true
-        lastContent = getCurrentContent()
-        
-        scope.launch {
-            while (isMonitoring) {
-                delay(CHECK_INTERVAL_MS)
-                checkForChanges()
-            }
+        if (isListening) return
+        try {
+            lastContent = getCurrentContent()
+            clipboard.addPrimaryClipChangedListener(clipListener)
+            isListening = true
+            Log.d(TAG, "📋 Native clipboard listener registered")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to register clip listener", e)
         }
     }
-    
+
     /**
-     * Stop monitoring clipboard changes
+     * Stops listening for system clipboard changes
      */
     fun stopMonitoring() {
-        Log.d(TAG, "🛑 Stopping clipboard monitoring")
-        isMonitoring = false
-        scope.cancel()
-    }
-    
-    /**
-     * Check for clipboard changes and notify if changed
-     */
-    private fun checkForChanges() {
+        if (!isListening) return
         try {
-            val currentContent = getCurrentContent()
-            
-            if (currentContent != lastContent && currentContent.isNotEmpty()) {
-                Log.d(TAG, "📝 Clipboard changed: \"$currentContent\"")
-                lastContent = currentContent
-                onClipboardChanged(currentContent)
-            }
+            clipboard.removePrimaryClipChangedListener(clipListener)
+            isListening = false
+            Log.d(TAG, "🛑 Native clipboard listener unregistered")
         } catch (e: Exception) {
-            Log.e(TAG, "Error checking clipboard", e)
+            Log.e(TAG, "Failed to unregister clip listener", e)
         }
     }
-    
+
     /**
-     * Set clipboard content (from remote device)
+     * Sets clipboard content received from Mac without re-echoing back.
+     * Dropped if Incognito Mode is active.
      */
     fun setContent(text: String) {
+        if (isIncognitoMode) {
+            Log.d(TAG, "🕶️ Remote clipboard update dropped: Incognito mode is active")
+            return
+        }
+        if (text.isBlank() || text == lastContent) return
         try {
-            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            lastContent = text
             val clip = ClipData.newPlainText("DroidLink", text)
             clipboard.setPrimaryClip(clip)
-            lastContent = text
-            Log.d(TAG, "✅ Clipboard set from remote: \"$text\"")
+            Log.d(TAG, "✅ Clipboard updated from remote: \"${text.take(30)}...\"")
         } catch (e: Exception) {
-            Log.e(TAG, "Error setting clipboard", e)
+            Log.e(TAG, "Error setting clipboard from remote", e)
         }
     }
-    
-    /**
-     * Get current clipboard content
-     */
+
+    private fun handleClipChanged() {
+        try {
+            if (isIncognitoMode) {
+                Log.d(TAG, "🕶️ Clipboard change ignored: Incognito mode is active")
+                return
+            }
+
+            val clip = clipboard.primaryClip
+            if (clip != null && clip.itemCount > 0) {
+                if (autoIgnoreSensitive && isSensitiveClip(clip)) {
+                    Log.i(TAG, "🔒 Ignoring sensitive/incognito clipboard item (not synced)")
+                    return
+                }
+
+                val current = clip.getItemAt(0).text?.toString() ?: ""
+                if (current.isNotBlank() && current != lastContent) {
+                    lastContent = current
+                    Log.d(TAG, "📝 Local clipboard changed: \"${current.take(30)}...\"")
+                    onClipboardChanged(current)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error handling clipboard change", e)
+        }
+    }
+
     private fun getCurrentContent(): String {
         return try {
-            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             val clip = clipboard.primaryClip
             if (clip != null && clip.itemCount > 0) {
                 clip.getItemAt(0).text?.toString() ?: ""
@@ -98,7 +132,7 @@ class ClipboardManager(
                 ""
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error getting clipboard content", e)
+            Log.e(TAG, "Error getting current clip content", e)
             ""
         }
     }

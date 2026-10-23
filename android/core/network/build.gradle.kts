@@ -5,7 +5,11 @@ plugins {
 
 android {
     namespace = "com.droidlink.core.network"
-    compileSdk = 34
+    compileSdk = 36
+
+    defaultConfig {
+        minSdk = 29
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

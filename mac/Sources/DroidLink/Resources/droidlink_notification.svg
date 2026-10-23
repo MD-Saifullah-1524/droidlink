@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <!-- DroidLink Notification Icon: 24x24dp Material Specification -->
+  <g fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Left Loop (Android) -->
+    <path d="M 10 8 L 7 8 C 4.79 8 3 9.79 3 12 C 3 14.21 4.79 16 7 16 L 10 16 C 12.21 16 14 14.21 14 12" />
+    <!-- Right Loop (Mac) -->
+    <path d="M 14 16 L 17 16 C 19.21 16 21 14.21 21 12 C 21 9.79 19.21 8 17 8 L 14 8 C 11.79 8 10 9.79 10 12" />
+    <!-- Android Antenna -->
+    <line x1="4.5" y1="6.5" x2="6.2" y2="8" stroke-width="1.8" />
+    <!-- Data Sync Dot -->
+    <circle cx="12" cy="12" r="1.5" fill="#FFFFFF" stroke="none" />
+  </g>
+</svg>

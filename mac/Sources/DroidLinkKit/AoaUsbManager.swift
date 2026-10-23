@@ -539,7 +539,9 @@ public final class AoaUsbManager: ObservableObject, @unchecked Sendable {
                                         NotificationCenter.default.post(name: .droidlinkFileReceived, object: fileMsg)
                                     }
                                 case .screen(let screenMsg):
-                                    ScreenMirroringManager.shared.handleScreenMessage(screenMsg)
+                                    Task { @MainActor in
+                                        ScreenMirroringManager.shared.handleScreenMessage(screenMsg)
+                                    }
                                 case .system(let sys):
                                     if sys.hasError && sys.error.message == "DEVICE_STATUS" {
                                         if let status = DeviceStatusInfo.fromJsonString(sys.error.details) {
@@ -555,7 +557,8 @@ public final class AoaUsbManager: ObservableObject, @unchecked Sendable {
                             }
                         }
                     } catch {
-                        print("⚠️ AoaUsbManager: Deframing error: \(error)")
+                        print("⚠️ AoaUsbManager: Deframing error: \(error), clearing streamBuffer to resync")
+                        streamBuffer.removeAll()
                     }
                 } else if kr != KERN_SUCCESS {
                     print("⚠️ AoaUsbManager: ReadPipe failed with kr=\(kr)")

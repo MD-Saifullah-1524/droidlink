@@ -11,6 +11,9 @@ final class ScreenMirroringWindowController: NSWindowController, NSWindowDelegat
     private var hasAppliedInitialGeometry = false
 
     init() {
+        print("🪟 [ScreenMirroringWindowController] Initializing window controller...")
+        fflush(stdout)
+
         // Default to a sleek portrait phone geometry (e.g. 330x740)
         let window = NSWindow(
             contentRect: NSRect(x: 150, y: 150, width: 330, height: 740),
@@ -19,16 +22,21 @@ final class ScreenMirroringWindowController: NSWindowController, NSWindowDelegat
             defer: false
         )
         window.center()
-        window.title = "DroidLink Mirror"
+        window.title = "DroidLink • Android Screen"
         window.titlebarAppearsTransparent = false
         window.isReleasedWhenClosed = false
+        window.hidesOnDeactivate = false
+        window.canHide = false
         window.minSize = NSSize(width: 240, height: 380)
 
         super.init(window: window)
+        self.window = window
         window.delegate = self
         window.contentView = NSHostingView(rootView: ScreenMirrorView())
 
         observeManager()
+        print("🪟 [ScreenMirroringWindowController] Initialized successfully. Window: \(window)")
+        fflush(stdout)
     }
 
     required init?(coder: NSCoder) {
@@ -40,8 +48,23 @@ final class ScreenMirroringWindowController: NSWindowController, NSWindowDelegat
 
         // Wire up trigger to open mirror window
         manager.onRequestOpenMirrorWindow = { [weak self] in
+            print("🪟 [ScreenMirroringWindowController] onRequestOpenMirrorWindow called!")
+            fflush(stdout)
             self?.openMirrorWindow()
         }
+
+        manager.$isMirroringActive
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] active in
+                print("🪟 [ScreenMirroringWindowController] isMirroringActive changed to: \(active)")
+                fflush(stdout)
+                if active {
+                    self?.openMirrorWindow()
+                } else {
+                    self?.window?.orderOut(nil)
+                }
+            }
+            .store(in: &cancellables)
 
         // Dynamically update window title when app changes
         manager.$currentApp
@@ -91,28 +114,39 @@ final class ScreenMirroringWindowController: NSWindowController, NSWindowDelegat
                     }
 
                     let currentCenter = NSPoint(x: window.frame.midX, y: window.frame.midY)
-                    window.contentAspectRatio = NSSize(width: Int(newContentWidth), height: Int(newContentHeight))
-
-                    let newFrame = NSRect(
+                    let targetContentRect = NSRect(
                         x: currentCenter.x - newContentWidth / 2,
                         y: currentCenter.y - newContentHeight / 2,
                         width: newContentWidth,
-                        height: newContentHeight + (window.frame.height - (window.contentView?.frame.height ?? newContentHeight))
+                        height: newContentHeight
                     )
-                    window.setFrame(newFrame, display: true, animate: true)
+                    let newWindowFrame = window.frameRect(forContentRect: targetContentRect)
+                    window.contentAspectRatio = NSSize(width: Int(newContentWidth), height: Int(newContentHeight))
+                    window.setFrame(newWindowFrame, display: true, animate: false)
                 }
             }
             .store(in: &cancellables)
     }
 
     func openMirrorWindow() {
-        guard let window = self.window else { return }
+        guard let window = self.window else {
+            print("❌ [ScreenMirroringWindowController] openMirrorWindow failed: self.window is nil!")
+            fflush(stdout)
+            return
+        }
+        print("🪟 [ScreenMirroringWindowController] openMirrorWindow executing. isVisible=\(window.isVisible), frame=\(window.frame)")
+        fflush(stdout)
+        self.showWindow(nil)
         window.makeKeyAndOrderFront(nil)
+        window.orderFrontRegardless()
         NSApp.activate(ignoringOtherApps: true)
+        print("🪟 [ScreenMirroringWindowController] window now isVisible=\(window.isVisible), frame=\(window.frame)")
+        fflush(stdout)
     }
 
     func windowWillClose(_ notification: Notification) {
         print("🔽 Screen Mirroring window closed by user")
+        fflush(stdout)
         ScreenMirroringManager.shared.stopMirroring()
     }
 }

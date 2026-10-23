@@ -54,7 +54,7 @@ class MainActivity : ComponentActivity() {
                 val mp = mpManager.getMediaProjection(result.resultCode, result.data!!)
                 DroidLinkService.setMediaProjectionInstance(mp)
                 mainViewModel?.updateMediaProjectionGranted(true)
-                DroidLinkService.startScreenMirroringIfPending()
+                DroidLinkService.startScreenMirroringSession()
             } catch (e: Exception) {
                 android.util.Log.e("MainActivity", "Failed to obtain MediaProjection: ${e.message}")
             }

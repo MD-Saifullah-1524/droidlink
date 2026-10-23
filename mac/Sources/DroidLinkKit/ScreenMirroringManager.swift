@@ -152,15 +152,17 @@ final class ScreenMirroringManager: ObservableObject {
         print("▶️ Screen mirroring started for \(app?.appName ?? "Phone Screen") at 8 Mbps")
     }
 
-    func stopMirroring() {
+    func stopMirroring(notifyRemote: Bool = true) {
         guard isMirroringActive else { return }
         isMirroringActive = false
         currentApp = nil
         isPrivacyModeActive = false
 
-        var msg = Droidlink_Protocol_ScreenMessage()
-        msg.event = .stop
-        onSendScreenMessage?(msg)
+        if notifyRemote {
+            var msg = Droidlink_Protocol_ScreenMessage()
+            msg.event = .stop
+            onSendScreenMessage?(msg)
+        }
 
         audioEngine.stopPlayback()
         audioEngine.stopMicCapture()
@@ -275,8 +277,23 @@ final class ScreenMirroringManager: ObservableObject {
             self.rotation = info.rotation
             self.dpi = info.dpi
             print("📱 Updated Android screen info: \(info.width)x\(info.height), rot=\(info.rotation)°")
+            fflush(stdout)
+            if !isMirroringActive {
+                self.isMirroringActive = true
+                self.audioEngine.startPlayback()
+                self.audioEngine.startMicCapture()
+            }
+            print("📱 Calling onRequestOpenMirrorWindow?()...")
+            fflush(stdout)
+            self.onRequestOpenMirrorWindow?()
 
         case .frame:
+            if !isMirroringActive {
+                self.isMirroringActive = true
+                self.audioEngine.startPlayback()
+                self.audioEngine.startMicCapture()
+                self.onRequestOpenMirrorWindow?()
+            }
             frameCounter += 1
             let now = Date().timeIntervalSince1970
             let elapsed = now - lastFpsCalculationTime
@@ -298,6 +315,10 @@ final class ScreenMirroringManager: ObservableObject {
         case .streamError:
             self.errorMessage = msg.errorMessage
             print("⚠️ Screen stream error: \(msg.errorMessage)")
+
+        case .stop:
+            print("⏹️ Received STOP for screen stream from Android")
+            stopMirroring(notifyRemote: false)
 
         default:
             break

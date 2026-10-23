@@ -75,13 +75,10 @@ public class MessageFramer {
             
             // Read type
             let typeCode = buffer[start + 3]
-            guard let type = FrameType(rawValue: typeCode) else {
-                throw FramingError.invalidFrameType(Int(typeCode))
-            }
-            
-            // Validate length
-            guard length <= maxFrameSize else {
-                throw FramingError.messageTooLarge(length)
+            guard let type = FrameType(rawValue: typeCode), length <= maxFrameSize else {
+                // Stream is misaligned or started mid-packet. Discard first byte to resynchronize stream.
+                buffer.removeFirst(1)
+                continue
             }
             
             // Check if we have enough data

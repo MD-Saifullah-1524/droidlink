@@ -46,6 +46,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         window.contentView = NSHostingView(rootView: contentView)
         window.makeKeyAndOrderFront(nil)
         
+        _ = ScreenMirroringWindowController.shared
+
         app.activate(ignoringOtherApps: true)
         
         setupMainMenu()
@@ -367,6 +369,8 @@ struct DroidLinkApp {
         let logPath = "/tmp/droidlink_gui.log"
         freopen(logPath, "a", stdout)
         freopen(logPath, "a", stderr)
+        setbuf(stdout, nil)
+        setbuf(stderr, nil)
 
         print("🚀 DroidLink starting...")
         fflush(stdout)

@@ -303,7 +303,9 @@ final class TcpServer {
                 NotificationCenter.default.post(name: .droidlinkFileReceived, object: fileMsg)
             }
         case .screen(let screenMsg):
-            ScreenMirroringManager.shared.handleScreenMessage(screenMsg)
+            Task { @MainActor in
+                ScreenMirroringManager.shared.handleScreenMessage(screenMsg)
+            }
         case .externalDisplay(let extMsg):
             Task { @MainActor in
                 ExternalDisplayManager.shared.handleIncomingMessage(extMsg)

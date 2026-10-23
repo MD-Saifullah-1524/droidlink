@@ -324,6 +324,7 @@ class DroidLinkService : Service() {
         val isScreenMirroringActive: StateFlow<Boolean> = _isScreenMirroringActive.asStateFlow()
 
         fun startScreenMirroringSession() {
+            isScreenMirroringPending = true
             activeServiceInstance?.startScreenMirroring()
         }
 
@@ -1595,11 +1596,27 @@ class DroidLinkService : Service() {
         aodPrivacyOverlayManager?.hide()
         mediaProjection = null
         Log.i(TAG, "Screen and audio mirroring pipelines stopped")
+        serviceScope.launch(Dispatchers.IO) {
+            try {
+                val stopMsg = ScreenProto.ScreenMessage.newBuilder()
+                    .setEvent(ScreenProto.ScreenMessage.StreamEventType.STOP)
+                    .build()
+                val rootMsg = DroidlinkMessages.DroidLinkMessage.newBuilder()
+                    .setId(System.currentTimeMillis())
+                    .setTimestamp(System.currentTimeMillis())
+                    .setType(DroidlinkMessages.MessageType.SCREEN_STREAM)
+                    .setScreen(stopMsg)
+                    .build()
+                sendToActiveClient(rootMsg.toByteArray())
+            } catch (_: Exception) {}
+        }
     }
 
     private suspend fun sendToActiveClient(bytes: ByteArray) {
         try {
-            if (tcpClient?.isConnected == true) {
+            if (aoaTransport?.isConnected == true) {
+                aoaTransport?.send(bytes)
+            } else if (tcpClient?.isConnected == true) {
                 tcpClient?.send(bytes)
             } else {
                 bleClient?.send(bytes)

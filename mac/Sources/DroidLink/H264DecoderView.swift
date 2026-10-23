@@ -228,6 +228,11 @@ final class H264DecoderView: NSView {
         rootLayer.addSublayer(sampleBufferLayer)
     }
 
+    override func layout() {
+        super.layout()
+        sampleBufferLayer.frame = bounds
+    }
+
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         window?.makeFirstResponder(self)

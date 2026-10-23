@@ -304,7 +304,9 @@ public final class BleServer: NSObject {
                 }
             }
         case .screen(let screenMsg):
-            ScreenMirroringManager.shared.handleScreenMessage(screenMsg)
+            Task { @MainActor in
+                ScreenMirroringManager.shared.handleScreenMessage(screenMsg)
+            }
         default:
             break
         }

@@ -3,6 +3,8 @@ package com.droidlink.core.clipboard
 import android.content.ClipData
 import android.content.ClipboardManager as SystemClipboardManager
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 
 /**
@@ -14,6 +16,7 @@ class ClipboardManager(
 ) {
     private val clipboard: SystemClipboardManager =
         context.getSystemService(Context.CLIPBOARD_SERVICE) as SystemClipboardManager
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     var isIncognitoMode: Boolean = false
     var autoIgnoreSensitive: Boolean = true
@@ -49,17 +52,19 @@ class ClipboardManager(
     }
 
     /**
-     * Starts listening for system clipboard changes
+     * Starts listening for system clipboard changes on the main looper
      */
     fun startMonitoring() {
         if (isListening) return
-        try {
-            lastContent = getCurrentContent()
-            clipboard.addPrimaryClipChangedListener(clipListener)
-            isListening = true
-            Log.d(TAG, "📋 Native clipboard listener registered")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to register clip listener", e)
+        mainHandler.post {
+            try {
+                lastContent = getCurrentContent()
+                clipboard.addPrimaryClipChangedListener(clipListener)
+                isListening = true
+                Log.d(TAG, "📋 Native clipboard listener registered on main looper")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to register clip listener", e)
+            }
         }
     }
 
@@ -68,12 +73,24 @@ class ClipboardManager(
      */
     fun stopMonitoring() {
         if (!isListening) return
-        try {
-            clipboard.removePrimaryClipChangedListener(clipListener)
-            isListening = false
-            Log.d(TAG, "🛑 Native clipboard listener unregistered")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to unregister clip listener", e)
+        mainHandler.post {
+            try {
+                clipboard.removePrimaryClipChangedListener(clipListener)
+                isListening = false
+                Log.d(TAG, "🛑 Native clipboard listener unregistered")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to unregister clip listener", e)
+            }
+        }
+    }
+
+    /**
+     * Actively checks clipboard content right now and dispatches update if changed.
+     * Useful when triggered by accessibility selection or window focus change.
+     */
+    fun checkClipboardNow() {
+        mainHandler.post {
+            handleClipChanged()
         }
     }
 
@@ -87,13 +104,15 @@ class ClipboardManager(
             return
         }
         if (text.isBlank() || text == lastContent) return
-        try {
-            lastContent = text
-            val clip = ClipData.newPlainText("DroidLink", text)
-            clipboard.setPrimaryClip(clip)
-            Log.d(TAG, "✅ Clipboard updated from remote: \"${text.take(30)}...\"")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error setting clipboard from remote", e)
+        mainHandler.post {
+            try {
+                lastContent = text
+                val clip = ClipData.newPlainText("DroidLink", text)
+                clipboard.setPrimaryClip(clip)
+                Log.d(TAG, "✅ Clipboard updated from remote: \"${text.take(30)}...\"")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error setting clipboard from remote", e)
+            }
         }
     }
 

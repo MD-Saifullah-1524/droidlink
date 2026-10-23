@@ -4,6 +4,7 @@ import AppKit
 struct HomeDetailView: View {
     @ObservedObject var viewModel: ContentViewModel
     @ObservedObject private var fileProviderManager = FileProviderDomainManager.shared
+    @ObservedObject private var aoaUsbManager = AoaUsbManager.shared
     var onNavigate: ((SidebarSection) -> Void)? = nil
     
     var body: some View {
@@ -322,6 +323,9 @@ struct HomeDetailView: View {
                                         .font(.system(size: 13, weight: .semibold))
                                     if fileProviderManager.isMounted {
                                         StatusBadge(title: "Mounted", color: .green, icon: "checkmark")
+                                    }
+                                    if aoaUsbManager.isConnected {
+                                        StatusBadge(title: "⚡ Supercharged USB", color: .blue)
                                     }
                                 }
                                 Text(fileProviderManager.isMounted ? "Browse /storage/emulated/0 in Finder sidebar" : "On-demand read/write access to Android files")

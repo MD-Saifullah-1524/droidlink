@@ -30,6 +30,10 @@ class DroidLinkAccessibilityService : AccessibilityService() {
     private var downY = 0f
     private var isGestureActive = false
     private var pendingGesture: GestureDescription? = null
+    private val clipboardDebounceHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val clipboardCheckRunnable = Runnable {
+        DroidLinkService.triggerClipboardSync()
+    }
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -38,7 +42,15 @@ class DroidLinkAccessibilityService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        // No-op: service is used for remote gesture & key dispatching
+        val eventType = event?.eventType ?: return
+        when (eventType) {
+            AccessibilityEvent.TYPE_VIEW_TEXT_SELECTION_CHANGED,
+            AccessibilityEvent.TYPE_VIEW_CLICKED,
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
+                clipboardDebounceHandler.removeCallbacks(clipboardCheckRunnable)
+                clipboardDebounceHandler.postDelayed(clipboardCheckRunnable, 200)
+            }
+        }
     }
 
     override fun onInterrupt() {

@@ -177,6 +177,20 @@ struct ScreenMirrorView: View {
                     .font(.caption2)
                     .lineLimit(1)
             }
+
+            if AoaUsbManager.shared.isConnected {
+                Text("•")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                HStack(spacing: 3) {
+                    Image(systemName: "bolt.fill")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.yellow)
+                    Text("AOA HID")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.green)
+                }
+            }
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)

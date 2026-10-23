@@ -1878,6 +1878,7 @@ private fun SettingsTabContent(
             true
         }
         val isFinderStorageEnabled by viewModel.isFinderStorageEnabled.collectAsState()
+        val isUsbConnected by viewModel.isUsbConnected.collectAsState()
 
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -1911,6 +1912,28 @@ private fun SettingsTabContent(
                         checked = isFinderStorageEnabled,
                         onCheckedChange = { viewModel.setFinderStorageEnabled(it) }
                     )
+                }
+
+                if (isUsbConnected && isFinderStorageEnabled && hasStorageAccess) {
+                    Surface(
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+                        color = Color(0xFF1E88E5).copy(alpha = 0.12f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Icon(Icons.Default.Bolt, contentDescription = null, tint = Color(0xFF1E88E5), modifier = Modifier.size(16.dp))
+                            Text(
+                                "⚡ Supercharged USB Mode Active (Wire Speed)",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF1E88E5)
+                            )
+                        }
+                    }
                 }
 
                 HorizontalDivider()

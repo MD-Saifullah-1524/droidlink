@@ -50,13 +50,22 @@ final class ExternalDisplayManager: ObservableObject {
             self?.h264Encoder.encode(sampleBuffer: sampleBuffer)
         }
 
-        // Listen for device disconnection to automatically stop external display and unplug virtual monitor
+        // Listen for USB or device disconnection to automatically stop external display and unplug virtual monitor
+        NotificationCenter.default.addObserver(
+            forName: .droidlinkUsbDisconnected,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            print("🖥️ ExternalDisplayManager: USB Device disconnected; stopping external display session and destroying virtual monitor")
+            self?.stopExternalDisplay(notifyRemote: false)
+        }
+
         NotificationCenter.default.addObserver(
             forName: .droidlinkDeviceDisconnected,
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            print("🖥️ ExternalDisplayManager: USB Device disconnected; stopping external display session and destroying virtual monitor")
+            print("🖥️ ExternalDisplayManager: Device disconnected; stopping external display session and destroying virtual monitor")
             self?.stopExternalDisplay(notifyRemote: false)
         }
 

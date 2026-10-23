@@ -198,6 +198,7 @@ final class H264DecoderView: NSView {
     private var accumulatedScrollDy: CGFloat = 0
     private var scrollThrottleTimer: Timer?
     private var lastScrollPt: (x: Float, y: Float) = (0.5, 0.5)
+    private var lastMouseLocation: NSPoint?
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -277,20 +278,43 @@ final class H264DecoderView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         let pt = normalizedPoint(from: convert(event.locationInWindow, from: nil))
+        lastMouseLocation = convert(event.locationInWindow, from: nil)
         ScreenMirroringManager.shared.sendTouch(normX: pt.x, normY: pt.y, action: .down)
+        if AoaUsbManager.shared.isConnected {
+            AoaHidController.shared.sendMouseMove(dx: 0, dy: 0, buttons: 0x01)
+        }
     }
 
     override func mouseDragged(with event: NSEvent) {
         let pt = normalizedPoint(from: convert(event.locationInWindow, from: nil))
+        let currentLoc = convert(event.locationInWindow, from: nil)
+        if let lastLoc = lastMouseLocation {
+            let dx = Int8(max(-127, min(127, Int(currentLoc.x - lastLoc.x))))
+            let dy = Int8(max(-127, min(127, Int(lastLoc.y - currentLoc.y))))
+            if AoaUsbManager.shared.isConnected {
+                AoaHidController.shared.sendMouseMove(dx: dx, dy: dy, buttons: 0x01)
+            }
+        }
+        lastMouseLocation = currentLoc
         ScreenMirroringManager.shared.sendTouch(normX: pt.x, normY: pt.y, action: .move)
     }
 
     override func mouseUp(with event: NSEvent) {
         let pt = normalizedPoint(from: convert(event.locationInWindow, from: nil))
+        lastMouseLocation = nil
         ScreenMirroringManager.shared.sendTouch(normX: pt.x, normY: pt.y, action: .up)
+        if AoaUsbManager.shared.isConnected {
+            AoaHidController.shared.sendMouseMove(dx: 0, dy: 0, buttons: 0x00)
+        }
     }
 
     override func rightMouseDown(with event: NSEvent) {
+        if AoaUsbManager.shared.isConnected {
+            AoaHidController.shared.sendMouseMove(dx: 0, dy: 0, buttons: 0x02)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
+                AoaHidController.shared.sendMouseMove(dx: 0, dy: 0, buttons: 0x00)
+            }
+        }
         // Right click triggers Android Back button
         ScreenMirroringManager.shared.sendNav(action: .back)
     }
@@ -298,6 +322,13 @@ final class H264DecoderView: NSView {
     override func scrollWheel(with event: NSEvent) {
         let pt = normalizedPoint(from: convert(event.locationInWindow, from: nil))
         lastScrollPt = pt
+
+        if AoaUsbManager.shared.isConnected {
+            let wheel = Int8(max(-127, min(127, Int(event.scrollingDeltaY))))
+            if wheel != 0 {
+                AoaHidController.shared.sendMouseMove(dx: 0, dy: 0, buttons: 0x00, wheel: wheel)
+            }
+        }
 
         var dx = event.scrollingDeltaX
         var dy = event.scrollingDeltaY
@@ -350,7 +381,51 @@ final class H264DecoderView: NSView {
         accumulatedScrollDy = 0
     }
 
+    private func hidKeyCode(for event: NSEvent) -> UInt8? {
+        switch event.keyCode {
+        case 51: return 0x2A // Backspace
+        case 36, 76: return 0x28 // Return / Enter
+        case 48: return 0x2B // Tab
+        case 49: return 0x2C // Space
+        case 53: return 0x29 // Escape
+        case 123: return 0x50 // Left Arrow
+        case 124: return 0x4F // Right Arrow
+        case 125: return 0x51 // Down Arrow
+        case 126: return 0x52 // Up Arrow
+        default:
+            guard let char = event.characters?.first else { return nil }
+            if char >= "a" && char <= "z" {
+                return UInt8(char.asciiValue! - Character("a").asciiValue! + 4)
+            }
+            if char >= "A" && char <= "Z" {
+                return UInt8(char.asciiValue! - Character("A").asciiValue! + 4)
+            }
+            if char >= "1" && char <= "9" {
+                return UInt8(char.asciiValue! - Character("1").asciiValue! + 0x1E)
+            }
+            if char == "0" { return 0x27 }
+            return nil
+        }
+    }
+
+    private func hidModifiers(for event: NSEvent) -> UInt8 {
+        var mod: UInt8 = 0
+        if event.modifierFlags.contains(.control) { mod |= 0x01 }
+        if event.modifierFlags.contains(.shift) { mod |= 0x02 }
+        if event.modifierFlags.contains(.option) { mod |= 0x04 }
+        if event.modifierFlags.contains(.command) { mod |= 0x08 }
+        return mod
+    }
+
     override func keyDown(with event: NSEvent) {
+        if AoaUsbManager.shared.isConnected, let hidCode = hidKeyCode(for: event) {
+            let mod = hidModifiers(for: event)
+            AoaHidController.shared.sendKeyboardReport(modifiers: mod, keyCodes: [hidCode])
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
+                AoaHidController.shared.sendKeyboardReleaseAll()
+            }
+        }
+
         switch event.keyCode {
         case 51: // Backspace / Delete
             ScreenMirroringManager.shared.sendKey(text: "", keyCode: 67) // KEYCODE_DEL

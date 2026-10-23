@@ -301,7 +301,9 @@ final class ContentViewModel: ObservableObject {
             guard let self = self else {
                 throw NSError(domain: "DroidLink", code: -1, userInfo: [NSLocalizedDescriptionKey: "App unavailable"])
             }
-            if self.tcpServer.hasActiveClient {
+            if AoaUsbManager.shared.isConnected {
+                return try await AoaUsbManager.shared.requestFileOperation(req)
+            } else if self.tcpServer.hasActiveClient {
                 return try await self.tcpServer.requestFileOperation(req)
             }
             return try await self.bleServer.requestFileOperation(req)
@@ -309,7 +311,14 @@ final class ContentViewModel: ObservableObject {
 
         ScreenMirroringManager.shared.onSendScreenMessage = { [weak self] msg in
             guard let self = self else { return }
-            if self.tcpServer.hasActiveClient {
+            if AoaUsbManager.shared.isConnected {
+                var rootMsg = Droidlink_Protocol_DroidLinkMessage()
+                rootMsg.id = UInt64(Date().timeIntervalSince1970 * 1000)
+                rootMsg.timestamp = UInt64(Date().timeIntervalSince1970 * 1000)
+                rootMsg.type = .screenStream
+                rootMsg.screen = msg
+                AoaUsbManager.shared.send(message: rootMsg)
+            } else if self.tcpServer.hasActiveClient {
                 self.tcpServer.sendScreen(message: msg)
             } else {
                 var rootMsg = Droidlink_Protocol_DroidLinkMessage()

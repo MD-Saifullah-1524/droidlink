@@ -494,6 +494,7 @@ public final class AoaUsbManager: ObservableObject, @unchecked Sendable {
             guard let self = self else { return }
             self.objectWillChange.send()
             self.onConnectionStatusChanged?(true)
+            NotificationCenter.default.post(name: .droidlinkUsbConnected, object: self.connectedDeviceName)
         }
 
         startReaderThread()
@@ -527,6 +528,18 @@ public final class AoaUsbManager: ObservableObject, @unchecked Sendable {
                                     Task { @MainActor in
                                         ExternalDisplayManager.shared.handleIncomingMessage(extMsg)
                                     }
+                                case .file(let fileMsg):
+                                    print("📁 AOA USB File message received: \(fileMsg.operation)")
+                                    fflush(stdout)
+                                    if fileMsg.operation == .fileChangeEvent {
+                                        NotificationCenter.default.post(name: .droidlinkFileChanged, object: fileMsg)
+                                    } else if let cont = self.popFileContinuation() {
+                                        cont.resume(returning: fileMsg)
+                                    } else {
+                                        NotificationCenter.default.post(name: .droidlinkFileReceived, object: fileMsg)
+                                    }
+                                case .screen(let screenMsg):
+                                    ScreenMirroringManager.shared.handleScreenMessage(screenMsg)
                                 case .system(let sys):
                                     if sys.hasError && sys.error.message == "DEVICE_STATUS" {
                                         if let status = DeviceStatusInfo.fromJsonString(sys.error.details) {
@@ -620,6 +633,13 @@ public final class AoaUsbManager: ObservableObject, @unchecked Sendable {
         bulkInPipeRef = 0
         bulkOutPipeRef = 0
 
+        fileContinuationLock.lock()
+        for cont in pendingFileContinuations {
+            cont.resume(throwing: NSError(domain: "AoaUsbManager", code: -2, userInfo: [NSLocalizedDescriptionKey: "AOA USB disconnected"]))
+        }
+        pendingFileContinuations.removeAll()
+        fileContinuationLock.unlock()
+
         print("🔌 AoaUsbManager: Accessory disconnected")
 
         DispatchQueue.main.async { [weak self] in
@@ -628,7 +648,101 @@ public final class AoaUsbManager: ObservableObject, @unchecked Sendable {
             self.isAccessoryMode = false
             self.connectedDeviceName = ""
             self.onConnectionStatusChanged?(false)
-            NotificationCenter.default.post(name: .droidlinkDeviceDisconnected, object: nil)
+            NotificationCenter.default.post(name: .droidlinkUsbDisconnected, object: nil)
+        }
+    }
+
+    // MARK: - File Transfer Operations over AOA USB
+
+    /// Sends an Endpoint 0 Control Request to the USB Device or Interface (used for AOA 2.0 HID commands)
+    @discardableResult
+    public func sendControlRequest(
+        requestType: UInt8,
+        request: UInt8,
+        value: UInt16,
+        index: UInt16,
+        data: Data? = nil
+    ) -> Bool {
+        var mutableData = data
+        let pData: UnsafeMutableRawPointer? = (mutableData != nil && !mutableData!.isEmpty) ?
+            mutableData!.withUnsafeMutableBytes { $0.baseAddress } : nil
+        var req = IOUSBDevRequest(
+            bmRequestType: requestType,
+            bRequest: request,
+            wValue: value,
+            wIndex: index,
+            wLength: UInt16(data?.count ?? 0),
+            pData: pData,
+            wLenDone: 0
+        )
+        if let devPtr = activeDeviceInterface, let dev = devPtr.pointee?.pointee {
+            let kr = dev.DeviceRequest(devPtr, &req)
+            if kr == KERN_SUCCESS { return true }
+        }
+        if let intfPtr = activeInterfaceInterface, let intf = intfPtr.pointee?.pointee {
+            let kr = intf.ControlRequest(intfPtr, 0, &req)
+            if kr == KERN_SUCCESS { return true }
+        }
+        return false
+    }
+
+    private var pendingFileContinuations: [CheckedContinuation<Droidlink_Protocol_FileMessage, any Error>] = []
+    private let fileContinuationLock = NSLock()
+
+    func addFileContinuation(_ continuation: CheckedContinuation<Droidlink_Protocol_FileMessage, any Error>) {
+        fileContinuationLock.lock()
+        defer { fileContinuationLock.unlock() }
+        pendingFileContinuations.append(continuation)
+    }
+
+    func popFileContinuation() -> CheckedContinuation<Droidlink_Protocol_FileMessage, any Error>? {
+        fileContinuationLock.lock()
+        defer { fileContinuationLock.unlock() }
+        guard !pendingFileContinuations.isEmpty else { return nil }
+        return pendingFileContinuations.removeFirst()
+    }
+
+    /// Sends a Protobuf message framed over AOA USB Bulk OUT
+    func send(message: Droidlink_Protocol_DroidLinkMessage) {
+        do {
+            let serialized = try message.serializedData()
+            let framer = MessageFramer()
+            let framed = try framer.frame(serialized)
+            _ = send(data: framed)
+        } catch {
+            print("❌ AoaUsbManager: Failed to frame/send Protobuf message: \(error)")
+        }
+    }
+
+    /// Requests a file operation over high-speed AOA USB Bulk endpoints (35-45+ MB/s)
+    func requestFileOperation(_ fileMsg: Droidlink_Protocol_FileMessage) async throws -> Droidlink_Protocol_FileMessage {
+        guard isConnected else {
+            throw NSError(domain: "AoaUsbManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "AOA USB is not connected"])
+        }
+        return try await withThrowingTaskGroup(of: Droidlink_Protocol_FileMessage.self) { group in
+            group.addTask { [weak self] in
+                guard let self = self else {
+                    throw NSError(domain: "AoaUsbManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "AoaUsbManager deallocated"])
+                }
+                return try await withCheckedThrowingContinuation { continuation in
+                    self.addFileContinuation(continuation)
+                    var rootMsg = Droidlink_Protocol_DroidLinkMessage()
+                    rootMsg.id = UInt64(Date().timeIntervalSince1970 * 1000)
+                    rootMsg.timestamp = rootMsg.id
+                    rootMsg.type = .fileTransfer
+                    rootMsg.file = fileMsg
+                    self.send(message: rootMsg)
+                }
+            }
+
+            group.addTask {
+                try await Task.sleep(nanoseconds: 12 * 1_000_000_000)
+                throw NSError(domain: "AoaUsbManager", code: -3, userInfo: [NSLocalizedDescriptionKey: "AOA USB file operation timed out"])
+            }
+
+            let result = try await group.next()!
+            group.cancelAll()
+            return result
         }
     }
 }

@@ -11,5 +11,7 @@ public extension Notification.Name {
     static let droidlinkDeviceStatusReceived = Notification.Name("droidlinkDeviceStatusReceived")
     static let droidlinkLocalTelemetryChanged = Notification.Name("droidlinkLocalTelemetryChanged")
     static let droidlinkFileChanged = Notification.Name("droidlinkFileChanged")
+    static let droidlinkUsbConnected = Notification.Name("droidlinkUsbConnected")
+    static let droidlinkUsbDisconnected = Notification.Name("droidlinkUsbDisconnected")
     static let droidlinkDistributedOpenMainWindow = Notification.Name("com.droidlink.mac.openMainWindow")
 }

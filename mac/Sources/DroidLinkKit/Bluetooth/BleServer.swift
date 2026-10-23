@@ -389,25 +389,38 @@ extension BleServer: @preconcurrency CBPeripheralManagerDelegate {
     }
     
     public func peripheralManager(_ peripheral: CBPeripheralManager, didReceiveWrite requests: [CBATTRequest]) {
+        guard let firstRequest = requests.first else { return }
+        
+        // If it's a pairing request, handle directly (it's single request)
+        if firstRequest.characteristic.uuid == Self.pairingCharUUID {
+            if let data = firstRequest.value {
+                handlePairingWrite(data: data, request: firstRequest)
+            } else {
+                peripheral.respond(to: firstRequest, withResult: .invalidAttributeValueLength)
+            }
+            return
+        }
+        
+        var overallResult: CBATTError.Code = .success
         for request in requests {
             guard let data = request.value else {
-                peripheral.respond(to: request, withResult: .invalidAttributeValueLength)
-                continue
+                overallResult = .invalidAttributeValueLength
+                break
             }
             
-            if request.characteristic.uuid == Self.pairingCharUUID {
-                handlePairingWrite(data: data, request: request)
-            } else if request.characteristic.uuid == Self.rxCharUUID {
+            if request.characteristic.uuid == Self.rxCharUUID {
                 if let completeFrame = rxChunker.feed(chunk: data) {
                     print("📦 BLE reassembled complete frame: \(completeFrame.count) bytes")
                     fflush(stdout)
                     handleIncomingCompleteFrame(completeFrame)
                 }
-                peripheral.respond(to: request, withResult: .success)
             } else {
-                peripheral.respond(to: request, withResult: .requestNotSupported)
+                overallResult = .requestNotSupported
+                break
             }
         }
+        
+        peripheral.respond(to: firstRequest, withResult: overallResult)
     }
     
     private func handlePairingWrite(data: Data, request: CBATTRequest) {

@@ -310,6 +310,10 @@ class DroidLinkService : Service() {
             activeServiceInstance?.disconnectAoa()
         }
 
+        fun triggerClipboardSync() {
+            activeServiceInstance?.checkClipboard()
+        }
+
         private val _connectionState = MutableStateFlow<ServiceConnectionState>(ServiceConnectionState.Disconnected)
         val connectionState: StateFlow<ServiceConnectionState> = _connectionState.asStateFlow()
 
@@ -601,8 +605,13 @@ class DroidLinkService : Service() {
                                     .setClipboard(clipMsg)
                                     .build()
 
-                                client.send(rootMsg.toByteArray())
-                                Log.d(TAG, "Sent local clipboard to Mac over BLE: ${newContent.take(30)}...")
+                                val clientToUse = bleClient ?: client
+                                if (clientToUse.isConnected) {
+                                    clientToUse.send(rootMsg.toByteArray())
+                                    Log.d(TAG, "Sent local clipboard to Mac over BLE: ${newContent.take(30)}...")
+                                } else {
+                                    Log.w(TAG, "Cannot send clipboard: BLE client is not connected")
+                                }
                             } catch (e: Exception) {
                                 Log.e(TAG, "Failed to send clipboard", e)
                             }
@@ -823,6 +832,9 @@ class DroidLinkService : Service() {
                     if (rootMsg.hasExternalDisplay()) {
                         handleExternalDisplayMessage(rootMsg.externalDisplay)
                     }
+                    if (rootMsg.hasFile()) {
+                        handleFileMessage(rootMsg.file, aoaTransport = transport)
+                    }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error handling AOA USB message", e)
                 }
@@ -839,6 +851,10 @@ class DroidLinkService : Service() {
         transport?.close()
         ExternalDisplayActivity.stop()
         dismissExternalDisplayNotification()
+    }
+
+    fun checkClipboard() {
+        clipboardManager?.checkClipboardNow()
     }
 
     private fun connectHighSpeedTcp(host: String, port: Int) {
@@ -933,7 +949,8 @@ class DroidLinkService : Service() {
     private suspend fun handleFileMessage(
         fileMsg: FileProto.FileMessage,
         bleClient: BleClient? = null,
-        tcpClient: com.droidlink.core.network.TcpClient? = null
+        tcpClient: com.droidlink.core.network.TcpClient? = null,
+        aoaTransport: com.droidlink.core.network.AoaUsbTransport? = null
     ) {
         val storage = com.droidlink.core.security.PairingStorage(applicationContext)
         if (!storage.isFinderStorageEnabled()) {
@@ -943,7 +960,7 @@ class DroidLinkService : Service() {
                 .setFilePath(fileMsg.filePath)
                 .setErrorMessage("Finder storage access is disabled in Android settings")
                 .build()
-            sendFileResponse(errResp, bleClient, tcpClient)
+            sendFileResponse(errResp, bleClient, tcpClient, aoaTransport)
             return
         }
 
@@ -961,7 +978,7 @@ class DroidLinkService : Service() {
                     if (nextToken != null) {
                         respBuilder.setNextPageToken(nextToken)
                     }
-                    sendFileResponse(respBuilder.build(), bleClient, tcpClient)
+                    sendFileResponse(respBuilder.build(), bleClient, tcpClient, aoaTransport)
                 }
                 FileProto.FileMessage.FileOperation.GET_METADATA_REQUEST -> {
                     val info = fileSystemManager.getItemMetadata(fileMsg.filePath)
@@ -971,7 +988,7 @@ class DroidLinkService : Service() {
                     if (info != null) {
                         respBuilder.setFileInfo(info)
                     }
-                    sendFileResponse(respBuilder.build(), bleClient, tcpClient)
+                    sendFileResponse(respBuilder.build(), bleClient, tcpClient, aoaTransport)
                 }
                 FileProto.FileMessage.FileOperation.READ_CHUNK_REQUEST -> {
                     val result = fileSystemManager.readChunk(
@@ -988,7 +1005,7 @@ class DroidLinkService : Service() {
                         .setFileSize(result.totalSize)
                         .setIsEof(result.isEof)
                         .build()
-                    sendFileResponse(resp, bleClient, tcpClient)
+                    sendFileResponse(resp, bleClient, tcpClient, aoaTransport)
                 }
                 FileProto.FileMessage.FileOperation.WRITE_CHUNK_REQUEST -> {
                     val totalLength = fileSystemManager.writeChunk(
@@ -1005,7 +1022,7 @@ class DroidLinkService : Service() {
                         .setFileSize(totalLength)
                         .setIsEof(fileMsg.isEof)
                         .build()
-                    sendFileResponse(resp, bleClient, tcpClient)
+                    sendFileResponse(resp, bleClient, tcpClient, aoaTransport)
                 }
                 FileProto.FileMessage.FileOperation.CREATE_ITEM_REQUEST -> {
                     val info = fileSystemManager.createItem(fileMsg.filePath, fileMsg.isDirectory)
@@ -1014,7 +1031,7 @@ class DroidLinkService : Service() {
                         .setFilePath(fileMsg.filePath)
                         .setFileInfo(info)
                         .build()
-                    sendFileResponse(resp, bleClient, tcpClient)
+                    sendFileResponse(resp, bleClient, tcpClient, aoaTransport)
                 }
                 FileProto.FileMessage.FileOperation.DELETE_ITEM_REQUEST -> {
                     val success = fileSystemManager.deleteItem(fileMsg.filePath, recursive = true)
@@ -1024,7 +1041,7 @@ class DroidLinkService : Service() {
                     if (!success) {
                         respBuilder.setErrorMessage("Failed to delete item")
                     }
-                    sendFileResponse(respBuilder.build(), bleClient, tcpClient)
+                    sendFileResponse(respBuilder.build(), bleClient, tcpClient, aoaTransport)
                 }
                 FileProto.FileMessage.FileOperation.MOVE_ITEM_REQUEST -> {
                     val success = fileSystemManager.moveItem(fileMsg.filePath, fileMsg.targetPath)
@@ -1035,7 +1052,7 @@ class DroidLinkService : Service() {
                     if (!success) {
                         respBuilder.setErrorMessage("Failed to move item")
                     }
-                    sendFileResponse(respBuilder.build(), bleClient, tcpClient)
+                    sendFileResponse(respBuilder.build(), bleClient, tcpClient, aoaTransport)
                 }
                 FileProto.FileMessage.FileOperation.SUBSCRIBE_CHANGES_REQUEST -> {
                     fileWatcher?.startWatching(fileMsg.filePath)
@@ -1051,14 +1068,15 @@ class DroidLinkService : Service() {
                 .setFilePath(fileMsg.filePath)
                 .setErrorMessage(e.message ?: "Filesystem error")
                 .build()
-            sendFileResponse(errResp, bleClient, tcpClient)
+            sendFileResponse(errResp, bleClient, tcpClient, aoaTransport)
         }
     }
 
     private suspend fun sendFileResponse(
         fileResp: FileProto.FileMessage,
         bleClient: BleClient? = null,
-        tcpClient: com.droidlink.core.network.TcpClient? = null
+        tcpClient: com.droidlink.core.network.TcpClient? = null,
+        aoaTransport: com.droidlink.core.network.AoaUsbTransport? = null
     ) {
         val rootMsg = DroidlinkMessages.DroidLinkMessage.newBuilder()
             .setId(System.currentTimeMillis())
@@ -1067,7 +1085,9 @@ class DroidLinkService : Service() {
             .setFile(fileResp)
             .build()
         val bytes = rootMsg.toByteArray()
-        if (tcpClient != null && tcpClient.isConnected) {
+        if (aoaTransport != null && aoaTransport.isConnected) {
+            aoaTransport.send(bytes)
+        } else if (tcpClient != null && tcpClient.isConnected) {
             tcpClient.send(bytes)
         } else if (this.tcpClient?.isConnected == true) {
             this.tcpClient?.send(bytes)

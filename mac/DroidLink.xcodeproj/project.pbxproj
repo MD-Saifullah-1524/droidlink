@@ -80,6 +80,7 @@
 		A100007B /* VirtualDisplayInputInjector.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200007B /* VirtualDisplayInputInjector.swift */; };
 		A100007C /* ExternalDisplayManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200007C /* ExternalDisplayManager.swift */; };
 		A100007D /* AoaUsbManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200007D /* AoaUsbManager.swift */; };
+		A100007E /* AoaHidController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200007E /* AoaHidController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -168,6 +169,7 @@
 		A200007B /* VirtualDisplayInputInjector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VirtualDisplayInputInjector.swift; sourceTree = "<group>"; };
 		A200007C /* ExternalDisplayManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExternalDisplayManager.swift; sourceTree = "<group>"; };
 		A200007D /* AoaUsbManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AoaUsbManager.swift; sourceTree = "<group>"; };
+		A200007E /* AoaHidController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AoaHidController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -258,6 +260,7 @@
 				A200007B /* VirtualDisplayInputInjector.swift */,
 				A200007C /* ExternalDisplayManager.swift */,
 				A200007D /* AoaUsbManager.swift */,
+				A200007E /* AoaHidController.swift */,
 			);
 			name = DroidLinkKit;
 			path = Sources/DroidLinkKit;
@@ -468,6 +471,7 @@
 				A100007B /* VirtualDisplayInputInjector.swift in Sources */,
 				A100007C /* ExternalDisplayManager.swift in Sources */,
 				A100007D /* AoaUsbManager.swift in Sources */,
+				A100007E /* AoaHidController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

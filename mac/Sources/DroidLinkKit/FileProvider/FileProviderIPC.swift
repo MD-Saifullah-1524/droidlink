@@ -4,13 +4,13 @@ import Darwin
 
 /// Shared IPC layer between DroidLink host app and DroidLinkFileProvider.appex.
 /// Uses a high-throughput Unix Domain Socket located in the shared App Group directory.
-final class FileProviderIPC: @unchecked Sendable {
-    static let port: UInt16 = 9995
+public final class FileProviderIPC: @unchecked Sendable {
+    public static let port: UInt16 = 9995
 }
 
 // MARK: - IPC Client (used inside DroidLinkFileProvider.appex)
 
-final class FileProviderIPCClient: @unchecked Sendable {
+public final class FileProviderIPCClient: @unchecked Sendable {
     private var clientFd: Int32 = -1
     private let framer = MessageFramer()
     private let lock = NSRecursiveLock()
@@ -18,14 +18,18 @@ final class FileProviderIPCClient: @unchecked Sendable {
     // Fast in-memory cache for folder listings and metadata
     private var directoryCache: [String: (files: [Droidlink_Protocol_FileInfo], nextToken: String?, timestamp: Date)] = [:]
     private var metadataCache: [String: (info: Droidlink_Protocol_FileInfo, timestamp: Date)] = [:]
-    private let cacheTTL: TimeInterval = 2.0 // 2 second cache for instant Finder browsing
+    private let cacheTTL: TimeInterval = 30.0 // 30 second cache for fast browsing without thrashing
     private let serverPort: UInt16
 
-    init(port: UInt16 = FileProviderIPC.port) {
+    private func normalizeKey(_ path: String) -> String {
+        return path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+    }
+
+    public init(port: UInt16 = FileProviderIPC.port) {
         self.serverPort = port
     }
 
-    func connect() throws {
+    public func connect() throws {
         lock.lock()
         defer { lock.unlock() }
 
@@ -57,7 +61,7 @@ final class FileProviderIPCClient: @unchecked Sendable {
         self.clientFd = fd
     }
 
-    func disconnect() {
+    public func disconnect() {
         lock.lock()
         defer { lock.unlock() }
         if clientFd >= 0 {
@@ -121,14 +125,19 @@ final class FileProviderIPCClient: @unchecked Sendable {
     // High-level operations
 
     func enumDirectory(path: String, pageToken: String?) throws -> (files: [Droidlink_Protocol_FileInfo], nextPageToken: String?) {
-        let cacheKey = "\(path):\(pageToken ?? "")"
+        let cleanPath = normalizeKey(path)
+        let cacheKey = "\(cleanPath):\(pageToken ?? "")"
+        lock.lock()
         if let cached = directoryCache[cacheKey], Date().timeIntervalSince(cached.timestamp) < cacheTTL {
-            return (cached.files, cached.nextToken)
+            let res = (cached.files, cached.nextToken)
+            lock.unlock()
+            return res
         }
+        lock.unlock()
 
         var req = Droidlink_Protocol_FileMessage()
         req.operation = .enumDirectoryRequest
-        req.filePath = path
+        req.filePath = cleanPath
         if let token = pageToken {
             req.pageToken = token
         }
@@ -138,19 +147,33 @@ final class FileProviderIPCClient: @unchecked Sendable {
             throw NSError(domain: "DroidLinkFileProvider", code: 1, userInfo: [NSLocalizedDescriptionKey: resp.errorMessage])
         }
 
+        let now = Date()
+        lock.lock()
+        for file in resp.files {
+            let itemKey = normalizeKey(file.path)
+            if !itemKey.isEmpty {
+                metadataCache[itemKey] = (file, now)
+            }
+        }
         let result = (resp.files, resp.nextPageToken.isEmpty ? nil : resp.nextPageToken)
-        directoryCache[cacheKey] = (result.0, result.1, Date())
+        directoryCache[cacheKey] = (result.0, result.1, now)
+        lock.unlock()
         return result
     }
 
     func getMetadata(path: String) throws -> Droidlink_Protocol_FileInfo? {
-        if let cached = metadataCache[path], Date().timeIntervalSince(cached.timestamp) < cacheTTL {
-            return cached.info
+        let key = normalizeKey(path)
+        lock.lock()
+        if let cached = metadataCache[key], Date().timeIntervalSince(cached.timestamp) < cacheTTL {
+            let info = cached.info
+            lock.unlock()
+            return info
         }
+        lock.unlock()
 
         var req = Droidlink_Protocol_FileMessage()
         req.operation = .getMetadataRequest
-        req.filePath = path
+        req.filePath = key
 
         let resp = try sendRequest(req)
         if resp.operation == .fileError {
@@ -158,7 +181,9 @@ final class FileProviderIPCClient: @unchecked Sendable {
         }
 
         if let info = resp.fileInfo {
-            metadataCache[path] = (info, Date())
+            lock.lock()
+            metadataCache[key] = (info, Date())
+            lock.unlock()
             return info
         }
         return nil
@@ -179,7 +204,7 @@ final class FileProviderIPCClient: @unchecked Sendable {
         return (resp.fileData, resp.isEof, resp.fileSize)
     }
 
-    func writeChunk(path: String, offset: Int64, data: Data, isEof: Bool) throws -> Int64 {
+    public func writeChunk(path: String, offset: Int64, data: Data, isEof: Bool) throws -> Int64 {
         var req = Droidlink_Protocol_FileMessage()
         req.operation = .writeChunkRequest
         req.filePath = path
@@ -192,7 +217,9 @@ final class FileProviderIPCClient: @unchecked Sendable {
             throw NSError(domain: "DroidLinkFileProvider", code: 3, userInfo: [NSLocalizedDescriptionKey: resp.errorMessage])
         }
 
-        metadataCache.removeValue(forKey: path)
+        lock.lock()
+        metadataCache.removeValue(forKey: normalizeKey(path))
+        lock.unlock()
         return resp.fileSize
     }
 

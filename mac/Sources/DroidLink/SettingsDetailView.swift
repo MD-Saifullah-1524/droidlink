@@ -157,6 +157,19 @@ struct SettingsDetailView: View {
                                         Task {
                                             let paired = PairingStorage.loadPairedDevice()
                                             let deviceId = paired?.deviceId ?? "default"
+                                            let deviceName = paired?.deviceName ?? "Android"
+                                            try? await fileProviderManager.rebuildDomain(deviceId: deviceId, deviceName: deviceName)
+                                        }
+                                    } label: {
+                                        Label("Re-sync Storage", systemImage: "arrow.triangle.2.circlepath")
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .controlSize(.small)
+
+                                    Button {
+                                        Task {
+                                            let paired = PairingStorage.loadPairedDevice()
+                                            let deviceId = paired?.deviceId ?? "default"
                                             await fileProviderManager.revealInFinder(deviceId: deviceId)
                                         }
                                     } label: {

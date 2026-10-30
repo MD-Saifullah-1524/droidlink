@@ -101,10 +101,6 @@ dependencies {
     // ML Kit for QR code detection
     implementation("com.google.mlkit:barcode-scanning:17.2.0")
 
-    // Shizuku for privileged on-device execution (Zero-ADB)
-    implementation("dev.rikka.shizuku:api:13.1.5")
-    implementation("dev.rikka.shizuku:provider:13.1.5")
-
     // Testing
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlin:kotlin-test:1.9.0")

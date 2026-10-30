@@ -23,7 +23,9 @@ let package = Package(
                 "DroidLink/DroidLink.entitlements",
                 "DroidLink/Info.plist",
                 "DroidLinkFileProvider/DroidLinkFileProvider.entitlements",
-                "DroidLinkFileProvider/Info.plist"
+                "DroidLinkFileProvider/Info.plist",
+                "DroidLinkShare/DroidLinkShare.entitlements",
+                "DroidLinkShare/Info.plist"
             ]
         ),
         .testTarget(

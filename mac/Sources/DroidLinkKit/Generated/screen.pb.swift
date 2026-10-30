@@ -186,6 +186,8 @@ nonisolated struct Droidlink_Protocol_ScreenMessage: Sendable {
     case launchAppResponse // = 23
     case micData // = 24
     case micControl // = 25
+    case startDexRequest // = 26
+    case dexStarted // = 27
     case UNRECOGNIZED(Int)
 
     init() { self = .streamUnknown }
@@ -213,6 +215,8 @@ nonisolated struct Droidlink_Protocol_ScreenMessage: Sendable {
       case 23: self = .launchAppResponse
       case 24: self = .micData
       case 25: self = .micControl
+      case 26: self = .startDexRequest
+      case 27: self = .dexStarted
       default: self = .UNRECOGNIZED(rawValue)
       }
     }
@@ -240,6 +244,8 @@ nonisolated struct Droidlink_Protocol_ScreenMessage: Sendable {
       case .launchAppResponse: return 23
       case .micData: return 24
       case .micControl: return 25
+      case .startDexRequest: return 26
+      case .dexStarted: return 27
       case .UNRECOGNIZED(let i): return i
       }
     }
@@ -249,7 +255,7 @@ nonisolated struct Droidlink_Protocol_ScreenMessage: Sendable {
       .startRequest, .started, .touchEvent, .keyEvent, .navEvent,
       .rotateRequest, .screenInfo, .audioFrame, .listAppsRequest,
       .listAppsResponse, .launchAppRequest, .launchAppResponse,
-      .micData, .micControl
+      .micData, .micControl, .startDexRequest, .dexStarted
     ]
   }
 
@@ -264,6 +270,9 @@ nonisolated struct Droidlink_Protocol_StreamConfig: Sendable {
   var codec: Droidlink_Protocol_VideoCodec = .codecUnknown
   var enableAudio: Bool = false
   var enableMic: Bool = false
+  var isVirtualDisplay: Bool = false
+  var dpi: Int32 = 0
+  var displayName: String = String()
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
   init() {}
@@ -316,6 +325,7 @@ nonisolated struct Droidlink_Protocol_TouchEvent: Sendable {
     case up // = 2
     case cancel // = 3
     case scroll // = 4
+    case hoverMove // = 5
     case UNRECOGNIZED(Int)
 
     init() { self = .down }
@@ -326,6 +336,7 @@ nonisolated struct Droidlink_Protocol_TouchEvent: Sendable {
       case 2: self = .up
       case 3: self = .cancel
       case 4: self = .scroll
+      case 5: self = .hoverMove
       default: self = .UNRECOGNIZED(rawValue)
       }
     }
@@ -336,10 +347,11 @@ nonisolated struct Droidlink_Protocol_TouchEvent: Sendable {
       case .up: return 2
       case .cancel: return 3
       case .scroll: return 4
+      case .hoverMove: return 5
       case .UNRECOGNIZED(let i): return i
       }
     }
-    static let allCases: [Droidlink_Protocol_TouchEvent.TouchAction] = [.down, .move, .up, .cancel, .scroll]
+    static let allCases: [Droidlink_Protocol_TouchEvent.TouchAction] = [.down, .move, .up, .cancel, .scroll, .hoverMove]
   }
 
   var action: Droidlink_Protocol_TouchEvent.TouchAction = .down
@@ -348,6 +360,10 @@ nonisolated struct Droidlink_Protocol_TouchEvent: Sendable {
   var scrollDx: Float = 0
   var scrollDy: Float = 0
   var pointerID: Int32 = 0
+  var buttonState: Int32 = 0
+  var pointerType: Int32 = 0
+  var rawX: Float = 0
+  var rawY: Float = 0
   var unknownFields = SwiftProtobuf.UnknownStorage()
   init() {}
 }
@@ -607,7 +623,7 @@ nonisolated extension Droidlink_Protocol_ScreenMessage: SwiftProtobuf.Message, S
 
 nonisolated extension Droidlink_Protocol_StreamConfig: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".StreamConfig"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}width\0\u{1}height\0\u{1}fps\0\u{1}bitrate\0\u{1}codec\0\u{1}enable_audio\0\u{1}enable_mic\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}width\0\u{1}height\0\u{1}fps\0\u{1}bitrate\0\u{1}codec\0\u{1}enable_audio\0\u{1}enable_mic\0\u{1}is_virtual_display\0\u{1}dpi\0\u{1}display_name\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -619,6 +635,9 @@ nonisolated extension Droidlink_Protocol_StreamConfig: SwiftProtobuf.Message, Sw
       case 5: try { try decoder.decodeSingularEnumField(value: &self.codec) }()
       case 6: try { try decoder.decodeSingularBoolField(value: &self.enableAudio) }()
       case 7: try { try decoder.decodeSingularBoolField(value: &self.enableMic) }()
+      case 8: try { try decoder.decodeSingularBoolField(value: &self.isVirtualDisplay) }()
+      case 9: try { try decoder.decodeSingularInt32Field(value: &self.dpi) }()
+      case 10: try { try decoder.decodeSingularStringField(value: &self.displayName) }()
       default: break
       }
     }
@@ -632,6 +651,9 @@ nonisolated extension Droidlink_Protocol_StreamConfig: SwiftProtobuf.Message, Sw
     if self.codec != .codecUnknown { try visitor.visitSingularEnumField(value: self.codec, fieldNumber: 5) }
     if self.enableAudio { try visitor.visitSingularBoolField(value: self.enableAudio, fieldNumber: 6) }
     if self.enableMic { try visitor.visitSingularBoolField(value: self.enableMic, fieldNumber: 7) }
+    if self.isVirtualDisplay { try visitor.visitSingularBoolField(value: self.isVirtualDisplay, fieldNumber: 8) }
+    if self.dpi != 0 { try visitor.visitSingularInt32Field(value: self.dpi, fieldNumber: 9) }
+    if !self.displayName.isEmpty { try visitor.visitSingularStringField(value: self.displayName, fieldNumber: 10) }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -643,6 +665,9 @@ nonisolated extension Droidlink_Protocol_StreamConfig: SwiftProtobuf.Message, Sw
       lhs.codec == rhs.codec &&
       lhs.enableAudio == rhs.enableAudio &&
       lhs.enableMic == rhs.enableMic &&
+      lhs.isVirtualDisplay == rhs.isVirtualDisplay &&
+      lhs.dpi == rhs.dpi &&
+      lhs.displayName == rhs.displayName &&
       lhs.unknownFields == rhs.unknownFields
   }
 }
@@ -785,7 +810,7 @@ nonisolated extension Droidlink_Protocol_ScreenInfo: SwiftProtobuf.Message, Swif
 
 nonisolated extension Droidlink_Protocol_TouchEvent: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".TouchEvent"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}action\0\u{1}x\0\u{1}y\0\u{1}scroll_dx\0\u{1}scroll_dy\0\u{1}pointer_id\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}action\0\u{1}x\0\u{1}y\0\u{1}scroll_dx\0\u{1}scroll_dy\0\u{1}pointer_id\0\u{1}button_state\0\u{1}pointer_type\0\u{1}raw_x\0\u{1}raw_y\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -796,6 +821,10 @@ nonisolated extension Droidlink_Protocol_TouchEvent: SwiftProtobuf.Message, Swif
       case 4: try { try decoder.decodeSingularFloatField(value: &self.scrollDx) }()
       case 5: try { try decoder.decodeSingularFloatField(value: &self.scrollDy) }()
       case 6: try { try decoder.decodeSingularInt32Field(value: &self.pointerID) }()
+      case 7: try { try decoder.decodeSingularInt32Field(value: &self.buttonState) }()
+      case 8: try { try decoder.decodeSingularInt32Field(value: &self.pointerType) }()
+      case 9: try { try decoder.decodeSingularFloatField(value: &self.rawX) }()
+      case 10: try { try decoder.decodeSingularFloatField(value: &self.rawY) }()
       default: break
       }
     }
@@ -808,11 +837,25 @@ nonisolated extension Droidlink_Protocol_TouchEvent: SwiftProtobuf.Message, Swif
     if self.scrollDx != 0 { try visitor.visitSingularFloatField(value: self.scrollDx, fieldNumber: 4) }
     if self.scrollDy != 0 { try visitor.visitSingularFloatField(value: self.scrollDy, fieldNumber: 5) }
     if self.pointerID != 0 { try visitor.visitSingularInt32Field(value: self.pointerID, fieldNumber: 6) }
+    if self.buttonState != 0 { try visitor.visitSingularInt32Field(value: self.buttonState, fieldNumber: 7) }
+    if self.pointerType != 0 { try visitor.visitSingularInt32Field(value: self.pointerType, fieldNumber: 8) }
+    if self.rawX != 0 { try visitor.visitSingularFloatField(value: self.rawX, fieldNumber: 9) }
+    if self.rawY != 0 { try visitor.visitSingularFloatField(value: self.rawY, fieldNumber: 10) }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Droidlink_Protocol_TouchEvent, rhs: Droidlink_Protocol_TouchEvent) -> Bool {
-    return lhs.action == rhs.action && lhs.x == rhs.x && lhs.y == rhs.y && lhs.scrollDx == rhs.scrollDx && lhs.scrollDy == rhs.scrollDy && lhs.pointerID == rhs.pointerID && lhs.unknownFields == rhs.unknownFields
+    return lhs.action == rhs.action &&
+      lhs.x == rhs.x &&
+      lhs.y == rhs.y &&
+      lhs.scrollDx == rhs.scrollDx &&
+      lhs.scrollDy == rhs.scrollDy &&
+      lhs.pointerID == rhs.pointerID &&
+      lhs.buttonState == rhs.buttonState &&
+      lhs.pointerType == rhs.pointerType &&
+      lhs.rawX == rhs.rawX &&
+      lhs.rawY == rhs.rawY &&
+      lhs.unknownFields == rhs.unknownFields
   }
 }
 

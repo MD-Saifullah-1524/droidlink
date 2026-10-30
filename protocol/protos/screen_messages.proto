@@ -28,6 +28,8 @@ message ScreenMessage {
     LAUNCH_APP_RESPONSE = 23;      // Launch app result
     MIC_DATA = 24;                 // Mac microphone audio stream to Android
     MIC_CONTROL = 25;              // Mac mic control (mute/unmute)
+    START_DEX_REQUEST = 26;        // Mac requests Android to start One UI Desktop / DeX
+    DEX_STARTED = 27;              // Android confirms Desktop Mode started
   }
 
   StreamEventType event = 1;
@@ -70,6 +72,9 @@ message StreamConfig {
   VideoCodec codec = 5;
   bool enable_audio = 6;
   bool enable_mic = 7;
+  bool is_virtual_display = 8;     // Whether to spawn an independent secondary Desktop display
+  int32 dpi = 9;                   // Virtual display density (e.g. 160 or 200)
+  string display_name = 10;        // Display name
 }
 
 enum VideoCodec {
@@ -116,6 +121,7 @@ message TouchEvent {
     UP = 2;
     CANCEL = 3;
     SCROLL = 4;
+    HOVER_MOVE = 5;
   }
   TouchAction action = 1;
   float x = 2;                     // Normalized (0.0 to 1.0)
@@ -123,6 +129,10 @@ message TouchEvent {
   float scroll_dx = 4;
   float scroll_dy = 5;
   int32 pointer_id = 6;
+  int32 button_state = 7;          // Bitmask: 1=Left, 2=Right, 4=Middle
+  int32 pointer_type = 8;          // 0=Touch, 1=Mouse, 2=Stylus
+  float raw_x = 9;                 // Absolute pixel X
+  float raw_y = 10;                // Absolute pixel Y
 }
 
 // Keyboard Input

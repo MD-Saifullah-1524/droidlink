@@ -61,10 +61,21 @@ class AndroidFileSystemManager(private val customRootDir: File? = null) {
      * Throws SecurityException if path tries to escape /storage/emulated/0.
      */
     fun resolveSafeFile(relativePath: String): File {
-        val cleanRel = relativePath.trim()
+        var cleanRel = relativePath.trim()
             .removePrefix("/")
             .removePrefix("\\")
             .ifEmpty { "." }
+
+        // Normalize "Downloads" / "Downloads/..." to standard Android "Download" if "Downloads" does not physically exist
+        if ((cleanRel.equals("Downloads", ignoreCase = true) || cleanRel.startsWith("Downloads/", ignoreCase = true))
+            && !File(rootDir, "Downloads").exists()) {
+            cleanRel = if (cleanRel.equals("Downloads", ignoreCase = true)) {
+                "Download"
+            } else {
+                "Download/" + cleanRel.substring("Downloads/".length)
+            }
+        }
+
         val target = File(rootDir, cleanRel).canonicalFile
         if (!target.path.startsWith(rootDir.path)) {
             logError("Directory traversal attack detected: $relativePath -> ${target.path}")
@@ -89,7 +100,7 @@ class AndroidFileSystemManager(private val customRootDir: File? = null) {
     fun enumerateDirectory(
         relativePath: String,
         pageToken: String? = null,
-        pageSize: Int = 250
+        pageSize: Int = 10000
     ): Pair<List<FileProto.FileInfo>, String?> {
         val dir = resolveSafeFile(relativePath)
         if (!dir.exists() || !dir.isDirectory) {
@@ -98,9 +109,9 @@ class AndroidFileSystemManager(private val customRootDir: File? = null) {
         }
 
         val allFiles = dir.listFiles() ?: emptyArray()
-        // Sort: directories first, then alphabetical by name
+        // Sort: directories first, then alphabetical by name.
+        // Dotfiles are preserved so macOS Finder can toggle their visibility via Cmd+Shift+.
         val sorted = allFiles
-            .filter { !isRestrictedPath(it) && !it.name.startsWith(".") }
             .sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase() }))
 
         val startIndex = if (!pageToken.isNullOrEmpty()) {

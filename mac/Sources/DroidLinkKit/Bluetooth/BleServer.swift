@@ -40,7 +40,9 @@ public final class BleServer: NSObject {
     private let rxChunker = BleChunker()
     private var incomingDeframingBuffer = Data()
     private var outgoingChunkQueue: [Data] = []
-    private var pendingFileContinuations: [CheckedContinuation<Droidlink_Protocol_FileMessage, any Error>] = []
+    private var pendingFileRequests: [String: CheckedContinuation<Droidlink_Protocol_FileMessage, any Error>] = [:]
+    private var pendingFileContinuationsOrder: [String] = []
+    private let fileContinuationLock = NSLock()
     
     private var advertisedName: String = "Mac"
     private var isPairingMode: Bool = true
@@ -191,19 +193,69 @@ public final class BleServer: NSObject {
         }
     }
 
+    private func addFileContinuation(id: String, _ continuation: CheckedContinuation<Droidlink_Protocol_FileMessage, any Error>) {
+        fileContinuationLock.lock()
+        defer { fileContinuationLock.unlock() }
+        pendingFileRequests[id] = continuation
+        pendingFileContinuationsOrder.append(id)
+    }
+
+    private func popFileContinuation(id: String) -> CheckedContinuation<Droidlink_Protocol_FileMessage, any Error>? {
+        fileContinuationLock.lock()
+        defer { fileContinuationLock.unlock() }
+        if !id.isEmpty, let matched = pendingFileRequests.removeValue(forKey: id) {
+            pendingFileContinuationsOrder.removeAll(where: { $0 == id })
+            return matched
+        }
+        guard let firstId = pendingFileContinuationsOrder.first,
+              let matched = pendingFileRequests.removeValue(forKey: firstId) else {
+            return nil
+        }
+        pendingFileContinuationsOrder.removeFirst()
+        return matched
+    }
+
+    private func removeFileContinuation(id: String) {
+        fileContinuationLock.lock()
+        defer { fileContinuationLock.unlock() }
+        pendingFileRequests.removeValue(forKey: id)
+        pendingFileContinuationsOrder.removeAll(where: { $0 == id })
+    }
+
+    private func drainFileContinuations() -> [CheckedContinuation<Droidlink_Protocol_FileMessage, any Error>] {
+        fileContinuationLock.lock()
+        defer { fileContinuationLock.unlock() }
+        let toResume = Array(pendingFileRequests.values)
+        pendingFileRequests.removeAll()
+        pendingFileContinuationsOrder.removeAll()
+        return toResume
+    }
+
     /// Sends a FileMessage to Android and awaits the response asynchronously
     func requestFileOperation(_ fileMsg: Droidlink_Protocol_FileMessage) async throws -> Droidlink_Protocol_FileMessage {
         guard connectedCentral != nil else {
             throw NSError(domain: "BleServer", code: -1, userInfo: [NSLocalizedDescriptionKey: "No active BLE connection to Android"])
         }
+        let reqId = fileMsg.fileID.isEmpty ? UUID().uuidString : fileMsg.fileID
+        var preparedMsg = fileMsg
+        preparedMsg.fileID = reqId
+        let messageToSend = preparedMsg
+
         return try await withCheckedThrowingContinuation { continuation in
-            pendingFileContinuations.append(continuation)
+            self.addFileContinuation(id: reqId, continuation)
             var rootMsg = Droidlink_Protocol_DroidLinkMessage()
             rootMsg.id = UInt64(Date().timeIntervalSince1970 * 1000)
             rootMsg.timestamp = rootMsg.id
             rootMsg.type = .fileTransfer
-            rootMsg.file = fileMsg
-            send(message: rootMsg)
+            rootMsg.file = messageToSend
+            self.send(message: rootMsg)
+
+            Task {
+                try? await Task.sleep(nanoseconds: 20 * 1_000_000_000)
+                if let timedOutCont = self.popFileContinuation(id: reqId) {
+                    timedOutCont.resume(throwing: NSError(domain: "BleServer", code: -3, userInfo: [NSLocalizedDescriptionKey: "BLE file operation timed out"]))
+                }
+            }
         }
     }
     
@@ -230,10 +282,10 @@ public final class BleServer: NSObject {
             self.rxChunker.reset()
             self.incomingDeframingBuffer.removeAll()
             self.outgoingChunkQueue.removeAll()
-            for continuation in self.pendingFileContinuations {
+            let toResume = self.drainFileContinuations()
+            for continuation in toResume {
                 continuation.resume(throwing: NSError(domain: "BleServer", code: -2, userInfo: [NSLocalizedDescriptionKey: "BLE disconnected"]))
             }
-            self.pendingFileContinuations.removeAll()
             self.delegate?.bleServerDidDisconnect()
             NotificationCenter.default.post(name: .droidlinkDeviceDisconnected, object: nil)
         }
@@ -276,19 +328,42 @@ public final class BleServer: NSObject {
             NotificationCenter.default.post(name: .droidlinkNotificationReceived, object: notif)
             
         case .file(let fileMsg):
-            print("📁 BLE File message: \(fileMsg.operation)")
+            print("📁 BLE File message: \(fileMsg.operation) (id: \(fileMsg.fileID))")
             fflush(stdout)
             if fileMsg.operation == .fileChangeEvent {
                 NotificationCenter.default.post(name: .droidlinkFileChanged, object: fileMsg)
-            } else if !pendingFileContinuations.isEmpty {
-                let continuation = pendingFileContinuations.removeFirst()
+            } else if let continuation = popFileContinuation(id: fileMsg.fileID) {
                 continuation.resume(returning: fileMsg)
             } else {
                 NotificationCenter.default.post(name: .droidlinkFileReceived, object: fileMsg)
             }
             
         case .system(let sys):
-            if sys.event == .goodbye {
+            if sys.event == .hello {
+                let peerName = sys.hello.deviceName.isEmpty ? "Android Device" : sys.hello.deviceName
+                print("🤝 Received HELLO handshake from Android via BLE: \(peerName)")
+                fflush(stdout)
+                
+                var ack = Droidlink_Protocol_SystemMessage()
+                ack.event = .helloAck
+                var helloAck = Droidlink_Protocol_HelloAckMessage()
+                helloAck.protocolVersion = "3.0.0"
+                helloAck.deviceID = PairingStorage.getOrCreateMyDeviceId()
+                helloAck.deviceName = Host.current().localizedName ?? "Mac"
+                helloAck.deviceType = .mac
+                ack.helloAck = helloAck
+                
+                var rootMsg = Droidlink_Protocol_DroidLinkMessage()
+                rootMsg.id = UInt64(Date().timeIntervalSince1970 * 1000)
+                rootMsg.timestamp = rootMsg.id
+                rootMsg.type = .system
+                rootMsg.system = ack
+                send(message: rootMsg)
+                
+                delegate?.bleServerDidConnect(deviceName: peerName, deviceId: sys.hello.deviceID)
+                NotificationCenter.default.post(name: .droidlinkDeviceConnected, object: peerName)
+                sendLocalTelemetry()
+            } else if sys.event == .goodbye {
                 let isManual = sys.hasError && sys.error.message == "MANUAL_DISCONNECT"
                 print("👋 BLE Remote peer sent GOODBYE\(isManual ? " (MANUAL_DISCONNECT)" : "")")
                 fflush(stdout)
@@ -301,12 +376,11 @@ public final class BleServer: NSObject {
                     print("📱 Received Android telemetry: \(status.deviceName) (\(status.deviceModel)) - Battery: \(status.batteryLevel)%")
                     fflush(stdout)
                     NotificationCenter.default.post(name: .droidlinkDeviceStatusReceived, object: status)
+                    NotificationCenter.default.post(name: .droidlinkDeviceConnected, object: status.deviceName)
                 }
             }
-        case .screen(let screenMsg):
-            Task { @MainActor in
-                ScreenMirroringManager.shared.handleScreenMessage(screenMsg)
-            }
+        case .screen:
+            break
         default:
             break
         }

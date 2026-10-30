@@ -98,11 +98,20 @@ public final class DeviceWakeupNotifier {
             return
         }
 
+        // Establish USB loopback tunnel for port
+        let revProcess = Process()
+        revProcess.executableURL = URL(fileURLWithPath: adbPath)
+        revProcess.arguments = ["reverse", "tcp:\(port)", "tcp:\(port)"]
+        revProcess.standardOutput = Pipe()
+        revProcess.standardError = Pipe()
+        try? revProcess.run()
+
         let process = Process()
         process.executableURL = URL(fileURLWithPath: adbPath)
         process.arguments = [
             "shell", "am", "broadcast",
             "-a", "com.droidlink.ACTION_RETRY_CONNECT",
+            "-p", "com.droidlink.app",
             "--es", "host", host,
             "--ei", "port", "\(port)",
             "--ez", "isManualRequest", isManualRequest ? "true" : "false"

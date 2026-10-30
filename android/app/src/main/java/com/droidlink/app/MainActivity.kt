@@ -2,8 +2,6 @@ package com.droidlink.app
 
 import android.content.Context
 import android.content.Intent
-import android.media.projection.MediaProjectionConfig
-import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -11,7 +9,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -32,46 +29,6 @@ enum class AppScreen {
 
 class MainActivity : ComponentActivity() {
     private var mainViewModel: MainViewModel? = null
-
-    companion object {
-        const val EXTRA_REQUEST_SCREEN_CAPTURE = "extra_request_screen_capture"
-    }
-
-    private val mediaProjectionLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        try {
-            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
-            nm.cancel(2002)
-        } catch (_: Exception) {}
-
-        if (result.resultCode == RESULT_OK && result.data != null) {
-            try {
-                // Android 14+ requirement: FGS must be updated to type mediaProjection before calling getMediaProjection
-                DroidLinkService.updateForegroundServiceTypes(applicationContext, hasMediaProjection = true)
-
-                val mpManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-                val mp = mpManager.getMediaProjection(result.resultCode, result.data!!)
-                DroidLinkService.setMediaProjectionInstance(mp)
-                mainViewModel?.updateMediaProjectionGranted(true)
-                DroidLinkService.startScreenMirroringSession()
-            } catch (e: Exception) {
-                android.util.Log.e("MainActivity", "Failed to obtain MediaProjection: ${e.message}")
-            }
-        }
-    }
-
-    private fun requestMediaProjection() {
-        val mpManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-        val captureIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            mpManager.createScreenCaptureIntent(
-                MediaProjectionConfig.createConfigForDefaultDisplay()
-            )
-        } else {
-            mpManager.createScreenCaptureIntent()
-        }
-        mediaProjectionLauncher.launch(captureIntent)
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -108,8 +65,7 @@ class MainActivity : ComponentActivity() {
                         AppScreen.Main -> {
                             MainScreen(
                                 viewModel = vm,
-                                onNavigateToAppFilters = { currentScreen = AppScreen.AppNotificationFilters },
-                                onRequestMediaProjection = { requestMediaProjection() }
+                                onNavigateToAppFilters = { currentScreen = AppScreen.AppNotificationFilters }
                             )
                         }
                         AppScreen.AppNotificationFilters -> {
@@ -129,6 +85,27 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         mainViewModel?.refreshPermissionStatus()
         checkAttachedUsbAccessory()
+        checkAndSyncClipboardOnFocus()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            checkAndSyncClipboardOnFocus()
+        }
+    }
+
+    private fun checkAndSyncClipboardOnFocus() {
+        try {
+            val cm = getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager ?: return
+            val clip = cm.primaryClip ?: return
+            if (clip.itemCount > 0) {
+                val text = clip.getItemAt(0).coerceToText(this)?.toString() ?: ""
+                if (text.isNotBlank()) {
+                    DroidLinkService.sendClipboardDirect(text)
+                }
+            }
+        } catch (_: Exception) {}
     }
 
     private fun checkAttachedUsbAccessory() {
@@ -147,9 +124,6 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleIntent(intent: Intent?) {
-        if (intent?.getBooleanExtra(EXTRA_REQUEST_SCREEN_CAPTURE, false) == true) {
-            requestMediaProjection()
-        }
         if (intent?.action == android.hardware.usb.UsbManager.ACTION_USB_ACCESSORY_ATTACHED) {
             val accessory = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 intent.getParcelableExtra(android.hardware.usb.UsbManager.EXTRA_ACCESSORY, android.hardware.usb.UsbAccessory::class.java)

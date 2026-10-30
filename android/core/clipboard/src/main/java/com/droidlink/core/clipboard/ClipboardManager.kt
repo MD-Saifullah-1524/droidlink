@@ -116,6 +116,14 @@ class ClipboardManager(
         }
     }
 
+    /**
+     * Updates the last recorded content to prevent duplicate echoes
+     * when clipboard is sent or updated by an external dispatcher.
+     */
+    fun updateLastContent(text: String) {
+        lastContent = text
+    }
+
     private fun handleClipChanged() {
         try {
             if (isIncognitoMode) {
@@ -130,7 +138,7 @@ class ClipboardManager(
                     return
                 }
 
-                val current = clip.getItemAt(0).text?.toString() ?: ""
+                val current = clip.getItemAt(0).coerceToText(context)?.toString() ?: ""
                 if (current.isNotBlank() && current != lastContent) {
                     lastContent = current
                     Log.d(TAG, "📝 Local clipboard changed: \"${current.take(30)}...\"")
@@ -146,7 +154,7 @@ class ClipboardManager(
         return try {
             val clip = clipboard.primaryClip
             if (clip != null && clip.itemCount > 0) {
-                clip.getItemAt(0).text?.toString() ?: ""
+                clip.getItemAt(0).coerceToText(context)?.toString() ?: ""
             } else {
                 ""
             }

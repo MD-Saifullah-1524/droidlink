@@ -25,6 +25,41 @@ final class FileProviderDomainManager: ObservableObject {
         Task {
             await refreshMountStatus()
         }
+        setupChangeObserver()
+    }
+
+    private func setupChangeObserver() {
+        NotificationCenter.default.addObserver(forName: .droidlinkFileChanged, object: nil, queue: .main) { [weak self] notif in
+            guard let self = self, let fileMsg = notif.object as? Droidlink_Protocol_FileMessage else { return }
+            print("📢 FileProviderDomainManager: Remote filesystem change on \(fileMsg.filePath) (\(fileMsg.changeType))")
+            Task {
+                await self.handleRemoteFileChange(fileMsg)
+            }
+        }
+    }
+
+    private func handleRemoteFileChange(_ fileMsg: Droidlink_Protocol_FileMessage) async {
+        guard let domainIdStr = currentDomainIdentifier else { return }
+        let domainId = NSFileProviderDomainIdentifier(domainIdStr)
+        let domains = (try? await NSFileProviderManager.domains()) ?? []
+        guard let domain = domains.first(where: { $0.identifier == domainId }),
+              let manager = NSFileProviderManager(for: domain) else { return }
+
+        let cleanPath = fileMsg.filePath.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        let parentPath: String = {
+            if let lastSlash = cleanPath.lastIndex(of: "/") {
+                return String(cleanPath[..<lastSlash])
+            }
+            return ""
+        }()
+
+        let containerId: NSFileProviderItemIdentifier = parentPath.isEmpty ? .rootContainer : NSFileProviderItemIdentifier(parentPath)
+        do {
+            try await manager.signalEnumerator(for: containerId)
+            print("🔄 Finder re-enumeration signaled for container: \(containerId.rawValue)")
+        } catch {
+            print("⚠️ signalEnumerator error: \(error)")
+        }
     }
 
     /// Queries fileproviderd to check if the DroidLink FileProvider domain is already registered.
@@ -48,7 +83,7 @@ final class FileProviderDomainManager: ObservableObject {
     }
 
     /// Mounts the Android storage directly in macOS Finder sidebar as a native CloudStorage File Provider.
-    func registerDomain(deviceId: String, deviceName: String) async throws {
+    func registerDomain(deviceId: String, deviceName: String, forceFresh: Bool = false) async throws {
         let displayName = "\(deviceName) (DroidLink)"
         let domainId = NSFileProviderDomainIdentifier("com.droidlink.provider.\(deviceId)")
 
@@ -64,8 +99,21 @@ final class FileProviderDomainManager: ObservableObject {
         print("🔍 Existing FileProvider domains (\(existing.count)): \(existing.map { "\($0.identifier.rawValue) - \($0.displayName)" })")
         fflush(stdout)
 
+        // Schema version check: V2 introduces correlation IDs and folder sync anchors.
+        // Wipes stale fileproviderd SQLite database that previously cached folders as childItemCount=0.
+        let currentSchemaVersion = 2
+        let savedSchemaVersion = UserDefaults.standard.integer(forKey: "fileProviderSchemaVersion")
+        let shouldForceWipe = forceFresh || (savedSchemaVersion < currentSchemaVersion)
+
         do {
-            if !existing.contains(where: { $0.identifier == domainId }) {
+            if shouldForceWipe, let staleDomain = existing.first(where: { $0.identifier == domainId }) {
+                print("🧹 Cleaning up stale FileProvider domain to wipe outdated empty-folder cache...")
+                fflush(stdout)
+                try? await NSFileProviderManager.remove(staleDomain)
+            }
+
+            let refreshedExisting = (try? await NSFileProviderManager.domains()) ?? []
+            if !refreshedExisting.contains(where: { $0.identifier == domainId }) {
                 print("⚡ Calling NSFileProviderManager.add(domain) for '\(displayName)'...")
                 fflush(stdout)
                 try await NSFileProviderManager.add(domain)
@@ -74,8 +122,13 @@ final class FileProviderDomainManager: ObservableObject {
             } else {
                 print("ℹ️ Domain '\(displayName)' already registered in NSFileProviderManager")
                 fflush(stdout)
+                if let matched = refreshedExisting.first(where: { $0.identifier == domainId }),
+                   let manager = NSFileProviderManager(for: matched) {
+                    try? await manager.signalEnumerator(for: .rootContainer)
+                }
             }
 
+            UserDefaults.standard.set(currentSchemaVersion, forKey: "fileProviderSchemaVersion")
             self.mountType = .fileProvider
             self.currentDomainIdentifier = domainId.rawValue
             self.isMounted = true
@@ -91,10 +144,16 @@ final class FileProviderDomainManager: ObservableObject {
         }
     }
 
+    /// Completely removes and re-registers the FileProvider domain, wiping stale local cache in fileproviderd.
+    func rebuildDomain(deviceId: String, deviceName: String) async throws {
+        try await registerDomain(deviceId: deviceId, deviceName: deviceName, forceFresh: true)
+    }
+
     /// Unmounts Android storage from macOS Finder.
     func unregisterDomain(deviceId: String) async throws {
         let domainId = NSFileProviderDomainIdentifier("com.droidlink.provider.\(deviceId)")
-        let domain = NSFileProviderDomain(identifier: domainId, displayName: "Android")
+        let domains = (try? await NSFileProviderManager.domains()) ?? []
+        let domain = domains.first(where: { $0.identifier == domainId }) ?? NSFileProviderDomain(identifier: domainId, displayName: "Android")
         try await NSFileProviderManager.remove(domain)
 
         ipcServer.stop()
@@ -109,9 +168,12 @@ final class FileProviderDomainManager: ObservableObject {
     /// Opens the mounted Android storage folder directly in macOS Finder under ~/Library/CloudStorage.
     func revealInFinder(deviceId: String) async {
         let domainId = NSFileProviderDomainIdentifier("com.droidlink.provider.\(deviceId)")
-        let domain = NSFileProviderDomain(identifier: domainId, displayName: "Android")
+        let domains = (try? await NSFileProviderManager.domains()) ?? []
         
-        if let manager = NSFileProviderManager(for: domain) {
+        if let domain = domains.first(where: { $0.identifier == domainId }),
+           let manager = NSFileProviderManager(for: domain) {
+            try? await manager.signalEnumerator(for: .rootContainer)
+
             do {
                 let rootURL = try await manager.getUserVisibleURL(for: .rootContainer)
                 print("📂 Opening in Finder via getUserVisibleURL: \(rootURL)")

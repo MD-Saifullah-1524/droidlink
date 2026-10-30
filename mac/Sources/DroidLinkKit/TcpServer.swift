@@ -109,6 +109,8 @@ final class TcpClientConnection: @unchecked Sendable {
 /// Bypasses macOS 15+ Network.framework CLI sandbox restrictions for instant local connection.
 @MainActor
 final class TcpServer {
+    static var shared: TcpServer?
+
     private var serverFd: Int32 = -1
     private var clientFd: Int32 = -1
     private var listenSource: (any DispatchSourceRead)?
@@ -118,7 +120,8 @@ final class TcpServer {
 
     private let framer = MessageFramer()
     var cryptoChannel: CryptoChannel?
-    private var pendingFileContinuations: [CheckedContinuation<Droidlink_Protocol_FileMessage, any Error>] = []
+    private var pendingFileRequests: [String: CheckedContinuation<Droidlink_Protocol_FileMessage, any Error>] = [:]
+    private var pendingFileContinuationsOrder: [String] = []
     private let continuationLock = NSLock()
 
     var hasActiveClient: Bool { clientFd >= 0 }
@@ -126,9 +129,7 @@ final class TcpServer {
     public private(set) var listeningPort: UInt16 = 0
     
     init() {
-        ScreenMirroringManager.shared.onSendScreenMessage = { [weak self] msg in
-            self?.sendScreen(message: msg)
-        }
+        Self.shared = self
     }
     
     /// Starts the server, dynamically picking a free non-conflicting port starting from preferredPort
@@ -279,7 +280,6 @@ final class TcpServer {
 
         self.activeConnection = connection
         NotificationCenter.default.post(name: .droidlinkDeviceConnected, object: nil)
-        ScreenMirroringManager.shared.onTcpConnected()
     }
     
     private func dispatchMessage(_ message: Droidlink_Protocol_DroidLinkMessage) {
@@ -293,25 +293,46 @@ final class TcpServer {
             fflush(stdout)
             NotificationCenter.default.post(name: .droidlinkNotificationReceived, object: notif)
         case .file(let fileMsg):
-            print("📁 File message received: \(fileMsg.operation)")
+            print("📁 File message received: \(fileMsg.operation) (id: \(fileMsg.fileID))")
             fflush(stdout)
             if fileMsg.operation == .fileChangeEvent {
                 NotificationCenter.default.post(name: .droidlinkFileChanged, object: fileMsg)
-            } else if let cont = popFileContinuation() {
+            } else if let cont = popFileContinuation(id: fileMsg.fileID) {
                 cont.resume(returning: fileMsg)
             } else {
                 NotificationCenter.default.post(name: .droidlinkFileReceived, object: fileMsg)
             }
-        case .screen(let screenMsg):
-            Task { @MainActor in
-                ScreenMirroringManager.shared.handleScreenMessage(screenMsg)
-            }
+        case .screen:
+            break
         case .externalDisplay(let extMsg):
             Task { @MainActor in
                 ExternalDisplayManager.shared.handleIncomingMessage(extMsg)
             }
         case .system(let sys):
-            if sys.event == .goodbye {
+            if sys.event == .hello {
+                let peerName = sys.hello.deviceName.isEmpty ? "Android Device" : sys.hello.deviceName
+                print("🤝 Received HELLO handshake via TCP from: \(peerName)")
+                fflush(stdout)
+                
+                var ack = Droidlink_Protocol_SystemMessage()
+                ack.event = .helloAck
+                var helloAck = Droidlink_Protocol_HelloAckMessage()
+                helloAck.protocolVersion = "3.0.0"
+                helloAck.deviceID = PairingStorage.getOrCreateMyDeviceId()
+                helloAck.deviceName = Host.current().localizedName ?? "Mac"
+                helloAck.deviceType = .mac
+                ack.helloAck = helloAck
+                
+                var rootMsg = Droidlink_Protocol_DroidLinkMessage()
+                rootMsg.id = UInt64(Date().timeIntervalSince1970 * 1000)
+                rootMsg.timestamp = rootMsg.id
+                rootMsg.type = .system
+                rootMsg.system = ack
+                send(message: rootMsg)
+                
+                NotificationCenter.default.post(name: .droidlinkDeviceConnected, object: peerName)
+                sendTelemetry(MacTelemetryCollector.shared.collectStatus(tcpPort: Int(listeningPort)))
+            } else if sys.event == .goodbye {
                 let isManual = sys.hasError && sys.error.message == "MANUAL_DISCONNECT"
                 print("👋 Peer sent GOODBYE\(isManual ? " (MANUAL_DISCONNECT)" : ""). Closing connection.")
                 fflush(stdout)
@@ -325,6 +346,7 @@ final class TcpServer {
                     print("📱 Received Android telemetry via TCP: \(status.deviceName) (\(status.deviceModel)) - Battery: \(status.batteryLevel)%")
                     fflush(stdout)
                     NotificationCenter.default.post(name: .droidlinkDeviceStatusReceived, object: status)
+                    NotificationCenter.default.post(name: .droidlinkDeviceConnected, object: status.deviceName)
                 }
             } else {
                 print("ℹ️ System message received via TCP: \(sys.event)")
@@ -458,58 +480,70 @@ final class TcpServer {
         }
     }
 
-    private func addFileContinuation(_ continuation: CheckedContinuation<Droidlink_Protocol_FileMessage, any Error>) {
-        continuationLock.lock()
-        pendingFileContinuations.append(continuation)
-        continuationLock.unlock()
-    }
-
-    private func popFileContinuation() -> CheckedContinuation<Droidlink_Protocol_FileMessage, any Error>? {
+    private func addFileContinuation(id: String, _ continuation: CheckedContinuation<Droidlink_Protocol_FileMessage, any Error>) {
         continuationLock.lock()
         defer { continuationLock.unlock() }
-        return pendingFileContinuations.isEmpty ? nil : pendingFileContinuations.removeFirst()
+        pendingFileRequests[id] = continuation
+        pendingFileContinuationsOrder.append(id)
+    }
+
+    private func popFileContinuation(id: String) -> CheckedContinuation<Droidlink_Protocol_FileMessage, any Error>? {
+        continuationLock.lock()
+        defer { continuationLock.unlock() }
+        if !id.isEmpty, let matched = pendingFileRequests.removeValue(forKey: id) {
+            pendingFileContinuationsOrder.removeAll(where: { $0 == id })
+            return matched
+        }
+        guard let firstId = pendingFileContinuationsOrder.first,
+              let matched = pendingFileRequests.removeValue(forKey: firstId) else {
+            return nil
+        }
+        pendingFileContinuationsOrder.removeFirst()
+        return matched
+    }
+
+    private func removeFileContinuation(id: String) {
+        continuationLock.lock()
+        defer { continuationLock.unlock() }
+        pendingFileRequests.removeValue(forKey: id)
+        pendingFileContinuationsOrder.removeAll(where: { $0 == id })
     }
 
     private func drainFileContinuations() -> [CheckedContinuation<Droidlink_Protocol_FileMessage, any Error>] {
         continuationLock.lock()
         defer { continuationLock.unlock() }
-        let toResume = pendingFileContinuations
-        pendingFileContinuations.removeAll()
+        let toResume = Array(pendingFileRequests.values)
+        pendingFileRequests.removeAll()
+        pendingFileContinuationsOrder.removeAll()
         return toResume
     }
 
-    /// Sends a FileMessage to Android and awaits the response asynchronously with a 10s timeout
+    /// Sends a FileMessage to Android and awaits the response asynchronously with a 15s timeout
     func requestFileOperation(_ fileMsg: Droidlink_Protocol_FileMessage) async throws -> Droidlink_Protocol_FileMessage {
         guard clientFd >= 0 else {
             throw NSError(domain: "TcpServer", code: -1, userInfo: [NSLocalizedDescriptionKey: "No active connection to Android"])
         }
-        return try await withThrowingTaskGroup(of: Droidlink_Protocol_FileMessage.self) { group in
-            group.addTask { [weak self] in
-                guard let self = self else {
-                    throw NSError(domain: "TcpServer", code: -1, userInfo: [NSLocalizedDescriptionKey: "Server deallocated"])
-                }
-                return try await withCheckedThrowingContinuation { continuation in
-                    Task { @MainActor in
-                        self.addFileContinuation(continuation)
+        let reqId = fileMsg.fileID.isEmpty ? UUID().uuidString : fileMsg.fileID
+        var preparedMsg = fileMsg
+        preparedMsg.fileID = reqId
+        let messageToSend = preparedMsg
 
-                        var rootMsg = Droidlink_Protocol_DroidLinkMessage()
-                        rootMsg.id = UInt64(Date().timeIntervalSince1970 * 1000)
-                        rootMsg.timestamp = rootMsg.id
-                        rootMsg.type = .fileTransfer
-                        rootMsg.file = fileMsg
-                        self.send(message: rootMsg)
-                    }
+        return try await withCheckedThrowingContinuation { continuation in
+            self.addFileContinuation(id: reqId, continuation)
+
+            var rootMsg = Droidlink_Protocol_DroidLinkMessage()
+            rootMsg.id = UInt64(Date().timeIntervalSince1970 * 1000)
+            rootMsg.timestamp = rootMsg.id
+            rootMsg.type = .fileTransfer
+            rootMsg.file = messageToSend
+            self.send(message: rootMsg)
+
+            Task {
+                try? await Task.sleep(nanoseconds: 15 * 1_000_000_000)
+                if let timedOutCont = self.popFileContinuation(id: reqId) {
+                    timedOutCont.resume(throwing: NSError(domain: "TcpServer", code: -3, userInfo: [NSLocalizedDescriptionKey: "File operation timed out"]))
                 }
             }
-
-            group.addTask {
-                try await Task.sleep(nanoseconds: 10 * 1_000_000_000)
-                throw NSError(domain: "TcpServer", code: -3, userInfo: [NSLocalizedDescriptionKey: "File operation timed out"])
-            }
-
-            let result = try await group.next()!
-            group.cancelAll()
-            return result
         }
     }
     

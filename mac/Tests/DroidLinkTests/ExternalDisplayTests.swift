@@ -107,5 +107,63 @@ final class ExternalDisplayTests: XCTestCase {
         let manager = ExternalDisplayManager.shared
         XCTAssertNotNil(manager)
         XCTAssertFalse(manager.isDisplayActive)
+        XCTAssertTrue(manager.isNitsSyncEnabled)
+    }
+
+    func testExternalDisplayCalibrationSerialization() throws {
+        var calib = Droidlink_Protocol_ExternalDisplayCalibration()
+        calib.isCalibrating = true
+        calib.macReferenceNits = 200.0
+        calib.macAmbientLux = 150.0
+        calib.forceRecalibrate = false
+        calib.calibratedBacklight = 0.42
+
+        var msg = Droidlink_Protocol_ExternalDisplayMessage()
+        msg.event = .calibrationStart
+        msg.calibration = calib
+        msg.timestamp = 1700000000000
+
+        let data = try msg.serializedData()
+        let decoded = try Droidlink_Protocol_ExternalDisplayMessage(serializedBytes: data)
+
+        XCTAssertEqual(decoded.event, .calibrationStart)
+        XCTAssertTrue(decoded.calibration.isCalibrating)
+        XCTAssertEqual(decoded.calibration.macReferenceNits, 200.0, accuracy: 0.001)
+        XCTAssertEqual(decoded.calibration.macAmbientLux, 150.0, accuracy: 0.001)
+        XCTAssertFalse(decoded.calibration.forceRecalibrate)
+        XCTAssertEqual(decoded.calibration.calibratedBacklight, 0.42, accuracy: 0.001)
+    }
+
+    func testExternalDisplayBrightnessSerialization() throws {
+        var brightness = Droidlink_Protocol_ExternalDisplayBrightness()
+        brightness.targetNits = 195.5
+        brightness.macAmbientLux = 120.0
+        brightness.macLinearBrightness = 0.38
+        brightness.timestamp = 1700000000000
+
+        var msg = Droidlink_Protocol_ExternalDisplayMessage()
+        msg.event = .brightnessUpdate
+        msg.brightness = brightness
+        msg.timestamp = 1700000000000
+
+        let data = try msg.serializedData()
+        let decoded = try Droidlink_Protocol_ExternalDisplayMessage(serializedBytes: data)
+
+        XCTAssertEqual(decoded.event, .brightnessUpdate)
+        XCTAssertEqual(decoded.brightness.targetNits, 195.5, accuracy: 0.001)
+        XCTAssertEqual(decoded.brightness.macAmbientLux, 120.0, accuracy: 0.001)
+        XCTAssertEqual(decoded.brightness.macLinearBrightness, 0.38, accuracy: 0.001)
+        XCTAssertEqual(decoded.brightness.timestamp, 1700000000000)
+    }
+
+    func testMacLuminanceMonitorCalculations() {
+        let monitor = MacLuminanceMonitor.shared
+        XCTAssertEqual(monitor.referenceCalibrationNits, 200.0)
+        let minNits = monitor.getEstimatedMinNits()
+        let maxNits = monitor.getEstimatedMaxSdrNits()
+        XCTAssertGreaterThan(maxNits, minNits)
+        let currentNits = monitor.getCurrentPhysicalNits()
+        XCTAssertGreaterThanOrEqual(currentNits, minNits)
+        XCTAssertLessThanOrEqual(currentNits, maxNits)
     }
 }

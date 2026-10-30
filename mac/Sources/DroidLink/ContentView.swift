@@ -19,8 +19,6 @@ struct MirroredNotificationItem: Identifiable, Equatable {
 enum SidebarSection: String, CaseIterable, Identifiable {
     case home = "Home"
     case externalDisplay = "External Display"
-    case screenMirror = "Phone Screen & Control"
-    case apps = "Apps"
     case notifications = "Notifications"
     case clipboard = "Universal Clipboard"
     case features = "Features Roadmap"
@@ -32,8 +30,6 @@ enum SidebarSection: String, CaseIterable, Identifiable {
         switch self {
         case .home: return "macbook.and.iphone"
         case .externalDisplay: return "display.2"
-        case .screenMirror: return "iphone"
-        case .apps: return "square.grid.2x2"
         case .notifications: return "bell.badge"
         case .clipboard: return "doc.on.clipboard"
         case .features: return "sparkles"
@@ -80,7 +76,8 @@ struct ContentView: View {
                             .foregroundStyle(.blue)
                     }
                 }
-                
+
+
                 NavigationLink(value: SidebarSection.externalDisplay) {
                     Label {
                         HStack {
@@ -96,47 +93,6 @@ struct ContentView: View {
                     }
                 }
 
-                NavigationLink(value: SidebarSection.screenMirror) {
-                    Label {
-                        HStack {
-                            Text("Phone Screen & Control")
-                            Spacer()
-                            if ScreenMirroringManager.shared.isMirroringActive {
-                                Circle().fill(Color.green).frame(width: 8, height: 8)
-                            } else if AoaUsbManager.shared.isConnected {
-                                Image(systemName: "bolt.fill")
-                                    .font(.caption2)
-                                    .foregroundStyle(.blue)
-                            }
-                        }
-                    } icon: {
-                        Image(systemName: SidebarSection.screenMirror.icon)
-                            .foregroundStyle(.teal)
-                    }
-                }
-                
-                NavigationLink(value: SidebarSection.apps) {
-                    Label {
-                        HStack {
-                            Text("Apps")
-                            Spacer()
-                            if !ScreenMirroringManager.shared.installedApps.isEmpty {
-                                Text("\(ScreenMirroringManager.shared.installedApps.count)")
-                                    .font(.caption2)
-                                    .fontWeight(.bold)
-                                    .foregroundStyle(.secondary)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 1)
-                                    .background(Color.secondary.opacity(0.15))
-                                    .clipShape(Capsule())
-                            }
-                        }
-                    } icon: {
-                        Image(systemName: SidebarSection.apps.icon)
-                            .foregroundStyle(.orange)
-                    }
-                }
-                
                 NavigationLink(value: SidebarSection.notifications) {
                     Label {
                         HStack {
@@ -216,10 +172,6 @@ struct ContentView: View {
             HomeDetailView(viewModel: viewModel, onNavigate: { selectedSection = $0 })
         case .externalDisplay:
             ExternalDisplayDetailView(viewModel: viewModel)
-        case .screenMirror:
-            ScreenMirrorDetailView(viewModel: viewModel)
-        case .apps:
-            AppsDetailView(viewModel: viewModel)
         case .notifications:
             NotificationsDetailView(viewModel: viewModel)
         case .clipboard:
@@ -318,7 +270,6 @@ final class ContentViewModel: ObservableObject {
         clipboardManager.isIncognitoMode = isIncognitoMode
         clipboardManager.autoIgnoreSensitive = autoIgnoreSensitive
         refreshHostIP()
-        _ = ScreenMirroringWindowController.shared
 
         FileProviderDomainManager.shared.ipcServer.onFileMessageRelay = { [weak self] req in
             guard let self = self else {
@@ -331,34 +282,23 @@ final class ContentViewModel: ObservableObject {
             }
             return try await self.bleServer.requestFileOperation(req)
         }
-
-        ScreenMirroringManager.shared.onSendScreenMessage = { [weak self] msg in
-            guard let self = self else { return }
-            if AoaUsbManager.shared.isConnected {
-                var rootMsg = Droidlink_Protocol_DroidLinkMessage()
-                rootMsg.id = UInt64(Date().timeIntervalSince1970 * 1000)
-                rootMsg.timestamp = UInt64(Date().timeIntervalSince1970 * 1000)
-                rootMsg.type = .screenStream
-                rootMsg.screen = msg
-                AoaUsbManager.shared.send(message: rootMsg)
-            } else if self.tcpServer.hasActiveClient {
-                self.tcpServer.sendScreen(message: msg)
-            } else {
-                var rootMsg = Droidlink_Protocol_DroidLinkMessage()
-                rootMsg.id = UInt64(Date().timeIntervalSince1970 * 1000)
-                rootMsg.timestamp = UInt64(Date().timeIntervalSince1970 * 1000)
-                rootMsg.type = .screenStream
-                rootMsg.screen = msg
-                self.bleServer.send(message: rootMsg)
-            }
-        }
+        try? FileProviderDomainManager.shared.ipcServer.start()
+        _ = FileTransferManager.shared
         
         MacTelemetryCollector.startObservingPowerChanges()
         
-        if let paired = PairingStorage.loadPairedDevice() {
+        if AoaUsbManager.shared.isConnected {
+            let paired = PairingStorage.loadPairedDevice()
+            let devName = paired?.deviceName ?? (!AoaUsbManager.shared.connectedDeviceName.isEmpty ? AoaUsbManager.shared.connectedDeviceName : "Android Device")
+            let devModel = paired?.deviceModel ?? "Android Device"
+            print("⚡ AOA USB already connected at startup; transitioning UI directly to Connected: \(devName)")
+            self.state = .connected(name: devName, model: devModel)
+            self.clipboardManager.startObserving()
+            self.startTelemetryTimer()
+            self.sendCurrentTelemetry(force: true)
+        } else if let paired = PairingStorage.loadPairedDevice() {
             if PairingStorage.isManuallyDisconnected {
                 print("⏸️ Paired device \(paired.deviceName) was manually disconnected; staying disconnected on launch.")
-                fflush(stdout)
                 state = .disconnected
             } else {
                 startListeningForPairedDevice(paired)
@@ -464,6 +404,16 @@ final class ContentViewModel: ObservableObject {
         clipboardHistory.removeAll()
     }
     
+    func send(message: Droidlink_Protocol_DroidLinkMessage) {
+        if AoaUsbManager.shared.isConnected {
+            AoaUsbManager.shared.send(message: message)
+        } else if tcpServer.hasActiveClient {
+            tcpServer.send(message: message)
+        } else {
+            bleServer.send(message: message)
+        }
+    }
+
     func sendManualClipboard(text: String) {
         lastClipboardText = text
         if !clipboardHistory.contains(text) {
@@ -485,10 +435,36 @@ final class ContentViewModel: ObservableObject {
         rootMsg.type = .clipboardSync
         rootMsg.clipboard = clipMsg
         
-        bleServer.send(message: rootMsg)
+        send(message: rootMsg)
     }
     
     func startListeningForPairedDevice(_ paired: PairedDeviceInfo, isManualRequest: Bool = false) {
+        if AoaUsbManager.shared.isConnected {
+            print("⚡ Already connected via AOA USB to \(paired.deviceName); marking connected.")
+            fflush(stdout)
+            stopWakeupTimer()
+            startTelemetryTimer()
+            sendCurrentTelemetry(force: true)
+            let devName = paired.deviceName.isEmpty ? AoaUsbManager.shared.connectedDeviceName : paired.deviceName
+            self.state = .connected(name: devName, model: paired.deviceModel ?? "Android Device")
+            clipboardManager.startObserving()
+            return
+        }
+        if tcpServer.hasActiveClient {
+            print("⚡ Already connected via TCP to \(paired.deviceName); marking connected.")
+            fflush(stdout)
+            stopWakeupTimer()
+            startTelemetryTimer()
+            sendCurrentTelemetry(force: true)
+            self.state = .connected(name: paired.deviceName, model: paired.deviceModel ?? "Android Device")
+            clipboardManager.startObserving()
+            return
+        }
+        if case .connected = state {
+            print("Already in connected state for \(paired.deviceName); skipping startListeningForPairedDevice.")
+            fflush(stdout)
+            return
+        }
         print("🔄 Resuming BLE listening for saved device: \(paired.deviceName) (isManualRequest=\(isManualRequest))")
         fflush(stdout)
         let model = paired.deviceModel ?? "Android Device"
@@ -539,7 +515,9 @@ final class ContentViewModel: ObservableObject {
         let status = MacTelemetryCollector.shared.collectStatus(tcpPort: Int(listeningPort))
         if force || MacTelemetryCollector.shared.hasStatusChanged(from: lastSentTelemetry, to: status) {
             lastSentTelemetry = status
-            if tcpServer.hasActiveClient {
+            if AoaUsbManager.shared.isConnected {
+                AoaUsbManager.shared.sendTelemetry(status)
+            } else if tcpServer.hasActiveClient {
                 tcpServer.sendTelemetry(status)
             } else {
                 bleServer.sendLocalTelemetry()
@@ -608,6 +586,16 @@ final class ContentViewModel: ObservableObject {
         print("🔄 User explicitly requested reconnection to \(paired.deviceName)")
         fflush(stdout)
         PairingStorage.isManuallyDisconnected = false
+        if AoaUsbManager.shared.isConnected {
+            print("⚡ AOA USB is already active; immediately marking connected.")
+            stopWakeupTimer()
+            startTelemetryTimer()
+            sendCurrentTelemetry(force: true)
+            let devName = paired.deviceName.isEmpty ? AoaUsbManager.shared.connectedDeviceName : paired.deviceName
+            self.state = .connected(name: devName, model: paired.deviceModel ?? "Android Device")
+            clipboardManager.startObserving()
+            return
+        }
         startListeningForPairedDevice(paired, isManualRequest: true)
     }
     
@@ -652,7 +640,7 @@ final class ContentViewModel: ObservableObject {
             rootMsg.type = .clipboardSync
             rootMsg.clipboard = clipMsg
             
-            self.bleServer.send(message: rootMsg)
+            self.send(message: rootMsg)
         }
     }
     
@@ -699,8 +687,6 @@ final class ContentViewModel: ObservableObject {
                     print("⚠️ Auto-mount error: \(error)")
                     fflush(stdout)
                 }
-
-                ScreenMirroringManager.shared.requestInstalledApps()
             }
         }
         
@@ -711,10 +697,14 @@ final class ContentViewModel: ObservableObject {
         ) { [weak self] _ in
             Task { @MainActor in
                 guard let self = self else { return }
+                if self.tcpServer.hasActiveClient || AoaUsbManager.shared.isConnected {
+                    print("ℹ️ Ignoring partial disconnect event because high-speed transport is still active (tcp=\(self.tcpServer.hasActiveClient), aoa=\(AoaUsbManager.shared.isConnected))")
+                    fflush(stdout)
+                    return
+                }
                 self.stopTelemetryTimer()
                 self.remoteDeviceStatus = nil
                 self.clipboardManager.stopObserving()
-                ScreenMirroringManager.shared.stopMirroring()
                 if let paired = PairingStorage.loadPairedDevice() {
                     if PairingStorage.isManuallyDisconnected {
                         print("⏸️ Paired device disconnected manually; not re-listening.")
@@ -744,12 +734,62 @@ final class ContentViewModel: ObservableObject {
                         try? await FileProviderDomainManager.shared.unregisterDomain(deviceId: paired.deviceId)
                     }
                 }
-                if let paired = PairingStorage.loadPairedDevice(), !status.deviceModel.isEmpty {
+                let paired = PairingStorage.loadPairedDevice()
+                if let paired = paired, !status.deviceModel.isEmpty {
                     var updated = paired
                     updated.deviceModel = status.deviceModel
                     PairingStorage.save(device: updated)
-                    if case .connected(let name, _) = self.state {
-                        self.state = .connected(name: name, model: status.deviceModel)
+                }
+                
+                let displayName = !status.deviceName.isEmpty ? status.deviceName : (paired?.deviceName ?? "Android Phone")
+                let displayModel = !status.deviceModel.isEmpty ? status.deviceModel : (paired?.deviceModel ?? "Android Device")
+                
+                // Receiving valid Android status is conclusive proof of active connection
+                if case .connected = self.state {
+                    self.state = .connected(name: displayName, model: displayModel)
+                } else {
+                    self.stopWakeupTimer()
+                    self.startTelemetryTimer()
+                    self.state = .connected(name: displayName, model: displayModel)
+                    self.clipboardManager.startObserving()
+                    print("✅ Connection verified via incoming device telemetry: \(displayName) (\(displayModel))")
+                    fflush(stdout)
+                }
+            }
+        }
+        
+        let usbConnectedObserver = NotificationCenter.default.addObserver(
+            forName: .droidlinkUsbConnected,
+            object: nil,
+            queue: .main
+        ) { [weak self] notif in
+            let paired = PairingStorage.loadPairedDevice()
+            let deviceName = paired?.deviceName ?? (notif.object as? String) ?? "Android Device"
+            let savedModel = paired?.deviceModel ?? "Android Device"
+            Task { @MainActor in
+                guard let self = self else { return }
+                self.stopWakeupTimer()
+                self.startTelemetryTimer()
+                self.sendCurrentTelemetry(force: true)
+                self.state = .connected(name: deviceName, model: savedModel)
+                self.clipboardManager.startObserving()
+                print("⚡ Mac UI transitioned to Connected via Direct USB: \(deviceName)")
+                fflush(stdout)
+            }
+        }
+        
+        let usbDisconnectedObserver = NotificationCenter.default.addObserver(
+            forName: .droidlinkUsbDisconnected,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                guard let self = self else { return }
+                if !self.tcpServer.hasActiveClient && self.bleServer.connectedCentral == nil {
+                    if let paired = PairingStorage.loadPairedDevice() {
+                        self.state = .waitingForPairedDevice(name: paired.deviceName, model: paired.deviceModel ?? "Android Device")
+                    } else {
+                        self.state = .disconnected
                     }
                 }
             }
@@ -853,7 +893,7 @@ final class ContentViewModel: ObservableObject {
             }
         }
         
-        observers = [connectedObserver, disconnectedObserver, statusObserver, clipboardObserver, notifObserver, activeObserver, telemetryObserver, wakeObserver]
+        observers = [connectedObserver, disconnectedObserver, statusObserver, usbConnectedObserver, usbDisconnectedObserver, clipboardObserver, notifObserver, activeObserver, telemetryObserver, wakeObserver]
     }
     
     deinit {

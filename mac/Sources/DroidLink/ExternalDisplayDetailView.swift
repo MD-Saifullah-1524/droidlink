@@ -128,6 +128,9 @@ struct ExternalDisplayDetailView: View {
                     displayConfigurationCard
                 }
 
+                // Luminance & Nits Calibration Card
+                luminanceMatchingCard
+
                 cleanupFailsafeCard
             }
             .padding(24)
@@ -505,6 +508,55 @@ struct ExternalDisplayDetailView: View {
                     .buttonStyle(.borderedProminent)
                     .tint(.blue)
                     .disabled(!canStartDisplay)
+                }
+            }
+        }
+    }
+
+    // MARK: - Luminance & Nits Matching Card
+
+    private var luminanceMatchingCard: some View {
+        NativeCard {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Luminance Matching (Nits)")
+                            .font(.system(size: 15, weight: .bold))
+                        Text("Matches physical light output (cd/m²) between this Mac and Android screen")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Toggle("", isOn: $displayManager.isNitsSyncEnabled)
+                        .labelsHidden()
+                }
+
+                HStack(spacing: 24) {
+                    metricItem(title: "MAC LUMINANCE", value: String(format: "%.0f nits", displayManager.currentMacNits))
+                    metricItem(title: "AMBIENT ROOM LIGHT", value: String(format: "%.0f lux", displayManager.currentMacLux))
+                    metricItem(title: "STATUS", value: displayManager.isCalibrationActive ? "🎯 Calibrating" : (displayManager.isDisplayActive ? "✅ Synced" : "Idle"))
+                }
+                .padding(10)
+                .background(Color.secondary.opacity(0.06))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                if displayManager.isDisplayActive {
+                    HStack {
+                        Text("Physical luminance dynamically tracks Mac F1/F2 keys and room lighting (ALS).")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Button(action: {
+                            displayManager.triggerRecalibration()
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "slider.horizontal.3")
+                                Text("Re-calibrate on Android")
+                            }
+                            .font(.caption)
+                        }
+                        .buttonStyle(.bordered)
+                    }
                 }
             }
         }

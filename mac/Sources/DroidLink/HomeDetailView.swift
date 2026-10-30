@@ -103,9 +103,19 @@ struct HomeDetailView: View {
                             .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(.secondary)
                         
-                        Text("Connected via Bluetooth LE • DroidLink GATT • AES-256-GCM")
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
+                        if aoaUsbManager.isConnected {
+                            Text("Connected via Direct USB (AOA 2.0) • Zero-ADB • Hardware Speed")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        } else if viewModel.remoteDeviceStatus?.localIpAddress.isEmpty == false {
+                            Text("Connected via Local Wi-Fi • High-Speed TCP • AES-256-GCM")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        } else {
+                            Text("Connected via Bluetooth LE • DroidLink GATT • AES-256-GCM")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
                     }
                     
                     Spacer()
@@ -336,6 +346,17 @@ struct HomeDetailView: View {
                             Spacer()
                             
                             if fileProviderManager.isMounted {
+                                Button("Re-sync") {
+                                    Task {
+                                        let paired = PairingStorage.loadPairedDevice()
+                                        let deviceId = paired?.deviceId ?? "default"
+                                        let deviceName = paired?.deviceName ?? "Android"
+                                        try? await fileProviderManager.rebuildDomain(deviceId: deviceId, deviceName: deviceName)
+                                    }
+                                }
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+
                                 Button("Open") {
                                     Task {
                                         let paired = PairingStorage.loadPairedDevice()
@@ -373,64 +394,6 @@ struct HomeDetailView: View {
                             ))
                             .toggleStyle(.switch)
                             .controlSize(.small)
-                        }
-                        .padding(.vertical, 8)
-                        
-                        Divider()
-                            .padding(.vertical, 4)
-                        
-                        // Screen Mirroring Module
-                        HStack(spacing: 14) {
-                            SquircleIcon(
-                                icon: "iphone",
-                                gradient: LinearGradient(colors: [.teal, .mint], startPoint: .topLeading, endPoint: .bottomTrailing),
-                                size: 36,
-                                iconSize: 18
-                            )
-                            
-                            VStack(alignment: .leading, spacing: 2) {
-                                HStack(spacing: 6) {
-                                    Text("Phone Screen & Control")
-                                        .font(.system(size: 13, weight: .semibold))
-                                    if ScreenMirroringManager.shared.isMirroringActive {
-                                        StatusBadge(title: "Active", color: .green)
-                                    } else if aoaUsbManager.isConnected {
-                                        StatusBadge(title: "⚡ USB HID Ready", color: .blue)
-                                    }
-                                }
-                                Text(ScreenMirroringManager.shared.isMirroringActive ?
-                                     "Streaming live Android screen with hardware USB HID" :
-                                     (aoaUsbManager.isConnected ? "Hardware AOA 2.0 USB mouse & keyboard control ready" : "Reverse display & control over Wi-Fi/USB"))
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
-                            
-                            Spacer()
-                            
-                            if ScreenMirroringManager.shared.isMirroringActive {
-                                Button("Stop") {
-                                    ScreenMirroringManager.shared.stopMirroring()
-                                }
-                                .buttonStyle(.bordered)
-                                .tint(.red)
-                                .controlSize(.small)
-                            } else {
-                                Button("Start") {
-                                    ScreenMirroringManager.shared.startMirroring()
-                                }
-                                .buttonStyle(.borderedProminent)
-                                .controlSize(.small)
-                            }
-
-                            Button {
-                                onNavigate?(.screenMirror)
-                            } label: {
-                                Image(systemName: "chevron.forward")
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundStyle(.tertiary)
-                            }
-                            .buttonStyle(.plain)
-                            .padding(.leading, 4)
                         }
                         .padding(.vertical, 8)
                     }

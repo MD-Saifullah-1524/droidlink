@@ -29,6 +29,12 @@ class DroidLinkAutoConnectReceiver : BroadcastReceiver() {
             val storage = PairingStorage(context)
             val paired = storage.getPairedDevice()
             if (paired != null) {
+                val currentServiceState = DroidLinkService.connectionState.value
+                if (currentServiceState is com.droidlink.app.service.ServiceConnectionState.Connected) {
+                    Log.d(TAG, "Ignoring ACTION_RETRY_CONNECT: service is already connected.")
+                    return
+                }
+
                 val isManualRequest = intent.getBooleanExtra("isManualRequest", false)
                 if (storage.isManuallyDisconnected() && !isManualRequest) {
                     Log.d(TAG, "Ignoring ACTION_RETRY_CONNECT: device was manually disconnected by user.")

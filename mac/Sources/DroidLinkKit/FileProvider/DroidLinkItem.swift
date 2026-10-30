@@ -45,11 +45,12 @@ final class DroidLinkItem: NSObject, NSFileProviderItem {
         if fileInfo.isDirectory {
             return .folder
         }
-        if !fileInfo.mimeType.isEmpty, let utType = UTType(mimeType: fileInfo.mimeType) {
-            return utType
-        }
         let ext = URL(fileURLWithPath: filename).pathExtension
         if !ext.isEmpty, let utType = UTType(filenameExtension: ext) {
+            return utType
+        }
+        if !fileInfo.mimeType.isEmpty && fileInfo.mimeType != "application/octet-stream",
+           let utType = UTType(mimeType: fileInfo.mimeType) {
             return utType
         }
         return .data
@@ -77,6 +78,20 @@ final class DroidLinkItem: NSObject, NSFileProviderItem {
     }
 
     var capabilities: NSFileProviderItemCapabilities {
+        if fileInfo.isDirectory {
+            if fileInfo.isReadOnly {
+                return [.allowsReading, .allowsContentEnumerating]
+            }
+            return [
+                .allowsReading,
+                .allowsWriting,
+                .allowsRenaming,
+                .allowsDeleting,
+                .allowsReparenting,
+                .allowsAddingSubItems,
+                .allowsContentEnumerating
+            ]
+        }
         if fileInfo.isReadOnly {
             return [.allowsReading]
         }

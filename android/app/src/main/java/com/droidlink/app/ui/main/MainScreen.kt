@@ -41,8 +41,7 @@ enum class MainTab(val title: String, val icon: ImageVector) {
 @Composable
 fun MainScreen(
     viewModel: MainViewModel,
-    onNavigateToAppFilters: () -> Unit,
-    onRequestMediaProjection: () -> Unit = {}
+    onNavigateToAppFilters: () -> Unit
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(MainTab.Home) }
     val uiState by viewModel.uiState.collectAsState()
@@ -84,8 +83,7 @@ fun MainScreen(
                 MainTab.Home -> HomeTabContent(
                     viewModel = viewModel,
                     onNavigateToNotifications = { selectedTab = MainTab.Notifications },
-                    onNavigateToClipboard = { selectedTab = MainTab.Clipboard },
-                    onRequestMediaProjection = onRequestMediaProjection
+                    onNavigateToClipboard = { selectedTab = MainTab.Clipboard }
                 )
                 MainTab.Notifications -> NotificationsTabContent(
                     viewModel = viewModel,
@@ -108,19 +106,14 @@ fun MainScreen(
 private fun HomeTabContent(
     viewModel: MainViewModel,
     onNavigateToNotifications: () -> Unit,
-    onNavigateToClipboard: () -> Unit,
-    onRequestMediaProjection: () -> Unit = {}
+    onNavigateToClipboard: () -> Unit
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val isClipboardSyncEnabled by viewModel.isClipboardSyncEnabled.collectAsState()
     val isNotificationSyncEnabled by viewModel.isNotificationSyncEnabled.collectAsState()
     val remoteStatus by viewModel.remoteDeviceStatus.collectAsState()
-    val isMediaProjectionGranted by viewModel.isMediaProjectionGranted.collectAsState()
-    val isAccessibilityEnabled by viewModel.isAccessibilityEnabled.collectAsState()
-    val shizukuState by viewModel.shizukuState.collectAsState()
     val isUsbConnected by viewModel.isUsbConnected.collectAsState()
-    val isScreenMirroringActive by viewModel.isScreenMirroringActive.collectAsState()
 
     val bluetoothPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         arrayOf(
@@ -809,223 +802,6 @@ private fun HomeTabContent(
                     }
                 }
 
-                // Screen Mirroring & Remote Control Card
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(14.dp)
-                        ) {
-                            Surface(
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                                modifier = Modifier.size(42.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = Icons.Default.ScreenShare,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            }
-                            Column(modifier = Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Text(
-                                        "Screen Mirroring & Control",
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    if (isScreenMirroringActive) {
-                                        Surface(
-                                            shape = CircleShape,
-                                            color = Color(0xFF4CAF50).copy(alpha = 0.15f)
-                                        ) {
-                                            Text(
-                                                "STREAMING",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontWeight = FontWeight.Bold,
-                                                color = Color(0xFF2E7D32),
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                            )
-                                        }
-                                    } else if (isUsbConnected) {
-                                        Surface(
-                                            shape = CircleShape,
-                                            color = Color(0xFF1976D2).copy(alpha = 0.12f)
-                                        ) {
-                                            Text(
-                                                "⚡ USB HID Ready",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontWeight = FontWeight.Bold,
-                                                color = Color(0xFF1976D2),
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                                Text(
-                                    "Low-latency H.264 display, audio & hardware AOA 2.0 USB HID control",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-
-                        // Hardware USB HID Indicator when USB connected
-                        if (isUsbConnected) {
-                            Surface(
-                                shape = MaterialTheme.shapes.small,
-                                color = Color(0xFF2E7D32).copy(alpha = 0.10f),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(10.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Icon(Icons.Default.Bolt, contentDescription = null, tint = Color(0xFF2E7D32), modifier = Modifier.size(16.dp))
-                                    Text(
-                                        "Native Hardware USB HID Mode: Mac acts as direct hardware USB mouse (1000Hz) & keyboard to Android kernel.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = Color(0xFF1B5E20)
-                                    )
-                                }
-                            }
-                        }
-
-                        HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f))
-
-                        // 1. MediaProjection Screen Capture Status
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                                Text(
-                                    "Display & Audio Capture",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                Text(
-                                    if (isMediaProjectionGranted) "Ready to stream to Mac" else "Requires one-time capture permission",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            if (isMediaProjectionGranted) {
-                                Surface(
-                                    shape = CircleShape,
-                                    color = Color(0xFF4CAF50).copy(alpha = 0.15f)
-                                ) {
-                                    Text(
-                                        "READY",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF2E7D32),
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                    )
-                                }
-                            } else {
-                                Button(
-                                    onClick = onRequestMediaProjection,
-                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                                ) {
-                                    Text("Grant", style = MaterialTheme.typography.labelMedium)
-                                }
-                            }
-                        }
-
-                        // 2. Accessibility Remote Control Status (Zero-ADB)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                                Text(
-                                    "Mouse, Touch & Keyboard",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                Text(
-                                    if (isUsbConnected) "Hardware USB HID (0ms lag)" else (if (isAccessibilityEnabled) "Zero-ADB control active" else "Requires Accessibility Service"),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            if (isUsbConnected || isAccessibilityEnabled) {
-                                Surface(
-                                    shape = CircleShape,
-                                    color = Color(0xFF4CAF50).copy(alpha = 0.15f)
-                                ) {
-                                    Text(
-                                        if (isUsbConnected) "USB HID" else "ACTIVE",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF2E7D32),
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                    )
-                                }
-                            } else {
-                                OutlinedButton(
-                                    onClick = { viewModel.openAccessibilitySettings() },
-                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                                ) {
-                                    Text("Enable", style = MaterialTheme.typography.labelMedium)
-                                }
-                            }
-                        }
-
-                        HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f))
-
-                        // Direct Launch Button
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End
-                        ) {
-                            if (isScreenMirroringActive) {
-                                Button(
-                                    onClick = { viewModel.stopScreenMirroring() },
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                                ) {
-                                    Icon(Icons.Default.Stop, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Spacer(Modifier.width(6.dp))
-                                    Text("Stop Mirroring", style = MaterialTheme.typography.labelMedium)
-                                }
-                            } else {
-                                Button(
-                                    onClick = {
-                                        if (isMediaProjectionGranted) {
-                                            viewModel.startScreenMirroring()
-                                        } else {
-                                            onRequestMediaProjection()
-                                        }
-                                    },
-                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                                ) {
-                                    Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Spacer(Modifier.width(6.dp))
-                                    Text("Start Mirroring to Mac", style = MaterialTheme.typography.labelMedium)
-                                }
-                            }
-                        }
-                    }
-                }
-
                 // External Display (Mac Secondary Monitor) & Zero-ADB Shizuku Card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -1130,68 +906,6 @@ private fun HomeTabContent(
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                            }
-                        }
-
-                        // Shizuku Zero-ADB Status
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                                Text(
-                                    "Zero-ADB Optimization (Shizuku)",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                Text(
-                                    when (shizukuState) {
-                                        is com.droidlink.app.shizuku.ShizukuState.Authorized -> "120Hz refresh rate & wake lock enabled"
-                                        is com.droidlink.app.shizuku.ShizukuState.PermissionRequired -> "Permission required to unlock 120Hz"
-                                        else -> "Running in standard mode (60Hz)"
-                                    },
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-
-                            when (shizukuState) {
-                                is com.droidlink.app.shizuku.ShizukuState.Authorized -> {
-                                    Surface(
-                                        color = Color(0xFF2E7D32).copy(alpha = 0.15f),
-                                        shape = CircleShape
-                                    ) {
-                                        Text(
-                                            "Active (120Hz)",
-                                            color = Color(0xFF2E7D32),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                        )
-                                    }
-                                }
-                                is com.droidlink.app.shizuku.ShizukuState.PermissionRequired -> {
-                                    Button(
-                                        onClick = { viewModel.requestShizukuPermission() },
-                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                                    ) {
-                                        Text("Grant", style = MaterialTheme.typography.labelMedium)
-                                    }
-                                }
-                                else -> {
-                                    Surface(
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.12f),
-                                        shape = CircleShape
-                                    ) {
-                                        Text(
-                                            "Standard",
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                        )
-                                    }
-                                }
                             }
                         }
 
@@ -1789,10 +1503,12 @@ private fun NotificationsTabContent(
 
 @Composable
 private fun ClipboardTabContent(viewModel: MainViewModel) {
+    val context = LocalContext.current
     val scrollState = rememberScrollState()
     val isClipboardSyncEnabled by viewModel.isClipboardSyncEnabled.collectAsState()
     val isIncognito by viewModel.isIncognitoMode.collectAsState()
     val autoIgnoreSensitive by viewModel.autoIgnoreSensitive.collectAsState()
+    val hasAccessibilityPermission by viewModel.hasAccessibilityPermission.collectAsState()
     var manualText by remember { mutableStateOf("") }
     var sentFeedback by remember { mutableStateOf(false) }
 
@@ -1892,6 +1608,51 @@ private fun ClipboardTabContent(viewModel: MainViewModel) {
                         "Text and URLs copied on this phone or Mac are synchronized instantly over local Wi-Fi.",
                     style = MaterialTheme.typography.bodySmall
                 )
+            }
+        }
+
+        // Accessibility Service Status Banner for Background Auto-Sync
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = if (hasAccessibilityPermission) Color(0xFF4CAF50).copy(alpha = 0.12f) else MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f)
+            )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    imageVector = if (hasAccessibilityPermission) Icons.Default.CheckCircle else Icons.Default.Bolt,
+                    contentDescription = null,
+                    tint = if (hasAccessibilityPermission) Color(0xFF4CAF50) else MaterialTheme.colorScheme.tertiary
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        if (hasAccessibilityPermission) "Automatic Background Sync: Active" else "Automatic Background Sync: Setup Required",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        if (hasAccessibilityPermission)
+                            "Text copied in any app is automatically synchronized to your Mac."
+                        else
+                            "Android blocks background apps from reading clipboard data. Enable the DroidLink Accessibility Service to auto-sync copied text across all your apps.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (!hasAccessibilityPermission) {
+                    Button(
+                        onClick = { context.startActivity(viewModel.getAccessibilitySettingsIntent()) },
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text("Enable", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
             }
         }
 
@@ -2000,6 +1761,7 @@ private fun SettingsTabContent(
     val scrollState = rememberScrollState()
     val uiState by viewModel.uiState.collectAsState()
     val hasNotificationPermission by viewModel.hasNotificationListenerPermission.collectAsState()
+    val hasAccessibilityPermission by viewModel.hasAccessibilityPermission.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.refreshPermissionStatus()
@@ -2284,6 +2046,31 @@ private fun SettingsTabContent(
                         }
                     }
                 }
+
+                HorizontalDivider()
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Background Clipboard Auto-Sync", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            if (hasAccessibilityPermission) "Granted • Background sync active" else "Not Granted • Android restricts background clipboard capture",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (hasAccessibilityPermission) Color(0xFF4CAF50) else MaterialTheme.colorScheme.error
+                        )
+                    }
+                    if (!hasAccessibilityPermission) {
+                        Button(
+                            onClick = { context.startActivity(viewModel.getAccessibilitySettingsIntent()) },
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text("Grant", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
             }
         }
 
@@ -2299,11 +2086,6 @@ private fun SettingsTabContent(
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("File Transfer", style = MaterialTheme.typography.bodyMedium)
-                    Text("Phase 1 (In Progress)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-                }
-                HorizontalDivider()
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Screen Mirroring", style = MaterialTheme.typography.bodyMedium)
                     Text("Phase 1 (In Progress)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                 }
                 HorizontalDivider()

@@ -1,19 +1,27 @@
 package com.droidlink.app.service
 
 import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.accessibilityservice.GestureDescription
+import android.content.ClipData
+import android.content.ClipboardManager as SystemClipboardManager
+import android.content.Context
 import android.graphics.Path
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import com.droidlink.core.security.PairingStorage
 import droidlink.protocol.ScreenProto.NavigationEvent
 import droidlink.protocol.ScreenProto.TouchEvent
 
 /**
- * Android Accessibility Service for zero-ADB remote control:
- * Injects touch gestures, two-finger scrolling, navigation actions (Back, Home, Recents, Power),
- * and keyboard text input from macOS DroidLink.
+ * Android Accessibility Service for zero-ADB remote control and seamless clipboard sync:
+ * 1. Automatic background clipboard sync overcoming Android 10+ restrictions.
+ * 2. Injects touch gestures, two-finger scrolling, navigation actions (Back, Home, Recents, Power),
+ *    and keyboard text input from macOS DroidLink.
  */
 class DroidLinkAccessibilityService : AccessibilityService() {
 
@@ -24,33 +32,131 @@ class DroidLinkAccessibilityService : AccessibilityService() {
 
         val isEnabled: Boolean
             get() = instance != null
+
+        private const val EXTRA_IS_SENSITIVE = "android.content.extra.IS_SENSITIVE"
+        private const val EXTRA_PRIVATE_BROWSING = "com.android.browser.private_browsing"
+        private const val EXTRA_CHROMIUM_INCOGNITO = "org.chromium.chrome.browser.incognito"
+        private const val EXTRA_VENDOR_SENSITIVE = "is_sensitive"
     }
 
     private var downX = 0f
     private var downY = 0f
     private var isGestureActive = false
     private var pendingGesture: GestureDescription? = null
-    private val clipboardDebounceHandler = android.os.Handler(android.os.Looper.getMainLooper())
-    private val clipboardCheckRunnable = Runnable {
-        DroidLinkService.triggerClipboardSync()
+
+    private var clipboardManager: SystemClipboardManager? = null
+    private var lastSentText: String = ""
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var isListenerRegistered = false
+
+    private val clipListener = SystemClipboardManager.OnPrimaryClipChangedListener {
+        checkAndSyncClipboard("OnPrimaryClipChangedListener")
     }
 
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
         Log.i(TAG, "⚡ DroidLink Accessibility Service connected & active!")
+
+        try {
+            val info = serviceInfo ?: AccessibilityServiceInfo()
+            info.eventTypes = AccessibilityEvent.TYPE_VIEW_CLICKED or
+                    AccessibilityEvent.TYPE_VIEW_TEXT_SELECTION_CHANGED or
+                    AccessibilityEvent.TYPE_VIEW_CONTEXT_CLICKED or
+                    AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
+                    AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
+            info.feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
+            info.notificationTimeout = 100
+            info.flags = AccessibilityServiceInfo.DEFAULT or
+                    AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS or
+                    AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS
+            serviceInfo = info
+
+            clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as? SystemClipboardManager
+            registerClipboardListener()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error initializing accessibility service info", e)
+        }
+    }
+
+    private fun registerClipboardListener() {
+        if (isListenerRegistered) return
+        mainHandler.post {
+            try {
+                clipboardManager?.addPrimaryClipChangedListener(clipListener)
+                isListenerRegistered = true
+                Log.d(TAG, "📋 Primary clip listener registered in Accessibility Service")
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not register primary clip listener in a11y service: ${e.message}")
+            }
+        }
+    }
+
+    private fun unregisterClipboardListener() {
+        if (!isListenerRegistered) return
+        mainHandler.post {
+            try {
+                clipboardManager?.removePrimaryClipChangedListener(clipListener)
+                isListenerRegistered = false
+                Log.d(TAG, "🛑 Primary clip listener unregistered in Accessibility Service")
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not unregister primary clip listener: ${e.message}")
+            }
+        }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val eventType = event?.eventType ?: return
         when (eventType) {
-            AccessibilityEvent.TYPE_VIEW_TEXT_SELECTION_CHANGED,
             AccessibilityEvent.TYPE_VIEW_CLICKED,
-            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
-                clipboardDebounceHandler.removeCallbacks(clipboardCheckRunnable)
-                clipboardDebounceHandler.postDelayed(clipboardCheckRunnable, 200)
+            AccessibilityEvent.TYPE_VIEW_TEXT_SELECTION_CHANGED,
+            AccessibilityEvent.TYPE_VIEW_CONTEXT_CLICKED,
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED,
+            AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
+                mainHandler.removeCallbacksAndMessages(null)
+                mainHandler.postDelayed({
+                    checkAndSyncClipboard("A11yEvent:$eventType")
+                }, 150)
             }
         }
+    }
+
+    private fun checkAndSyncClipboard(source: String) {
+        try {
+            val cm = clipboardManager ?: getSystemService(Context.CLIPBOARD_SERVICE) as? SystemClipboardManager ?: return
+            val clip: ClipData = cm.primaryClip ?: return
+            if (clip.itemCount == 0) return
+
+            val storage = PairingStorage(applicationContext)
+            if (!storage.isClipboardSyncEnabled()) return
+            if (storage.isIncognitoMode()) return
+
+            if (storage.isAutoIgnoreSensitive() && isSensitiveClip(clip)) {
+                Log.i(TAG, "🔒 Ignoring sensitive/incognito clipboard item from $source")
+                return
+            }
+
+            val text = clip.getItemAt(0).coerceToText(this)?.toString() ?: ""
+            if (text.isNotBlank() && text != lastSentText) {
+                lastSentText = text
+                Log.d(TAG, "📤 Auto-syncing clipboard to Mac via $source: \"${text.take(30)}...\"")
+                DroidLinkService.sendClipboardDirect(text)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking clipboard in accessibility service ($source)", e)
+        }
+    }
+
+    private fun isSensitiveClip(clip: ClipData): Boolean {
+        val description = clip.description ?: return false
+        val extras = description.extras ?: return false
+
+        if (extras.getBoolean(EXTRA_IS_SENSITIVE, false)) return true
+        if (extras.getBoolean(EXTRA_PRIVATE_BROWSING, false)) return true
+        if (extras.getBoolean(EXTRA_CHROMIUM_INCOGNITO, false)) return true
+        if (extras.getBoolean(EXTRA_VENDOR_SENSITIVE, false)) return true
+
+        return false
     }
 
     override fun onInterrupt() {
@@ -58,6 +164,7 @@ class DroidLinkAccessibilityService : AccessibilityService() {
     }
 
     override fun onDestroy() {
+        unregisterClipboardListener()
         super.onDestroy()
         if (instance == this) {
             instance = null
@@ -158,8 +265,6 @@ class DroidLinkAccessibilityService : AccessibilityService() {
                     deltaX = Math.signum(deltaX) * minDisplacement
                 }
 
-                // In macOS natural scrolling, scrollingDeltaY > 0 when fingers push UP.
-                // On Android, a swipe UP (startY -> startY - deltaY) scrolls the list down to reveal lower content.
                 val startX = realX.coerceIn(minDisplacement + 20f, (dm.widthPixels - minDisplacement - 20f).coerceAtLeast(minDisplacement + 20f))
                 val startY = realY.coerceIn(minDisplacement + 20f, (dm.heightPixels - minDisplacement - 20f).coerceAtLeast(minDisplacement + 20f))
 
@@ -218,7 +323,6 @@ class DroidLinkAccessibilityService : AccessibilityService() {
             return
         }
 
-        // Handle special keycodes: Backspace (67), Enter (66), Escape (111)
         when (keyCode) {
             67 -> { // KEYCODE_DEL (Backspace)
                 if (focused != null && focused.isEditable) {

@@ -26,14 +26,6 @@ struct FeaturesDetailView: View {
                     )
                     
                     featureItem(
-                        icon: "iphone",
-                        color: .teal,
-                        title: "Phone Screen & Control",
-                        description: "Low-latency reverse screen mirroring with native hardware USB HID mouse & keyboard and AOD privacy mode.",
-                        status: "Available Now"
-                    )
-                    
-                    featureItem(
                         icon: "display.2",
                         color: .indigo,
                         title: "External Display for Mac",

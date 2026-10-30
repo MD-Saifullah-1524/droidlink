@@ -3,8 +3,6 @@ package com.droidlink.app.display
 import com.google.protobuf.ByteString
 import droidlink.protocol.DroidlinkMessages
 import droidlink.protocol.ExternalDisplayProto
-import com.droidlink.app.shizuku.ShizukuState
-import com.droidlink.app.shizuku.ShellResult
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -124,20 +122,54 @@ class ExternalDisplayTest {
     }
 
     @Test
-    fun testShizukuStateAndShellResult() {
-        val successResult = ShellResult(0, "success", "")
-        assertTrue(successResult.isSuccess)
-        assertEquals(0, successResult.exitCode)
+    fun testExternalDisplayCalibrationSerialization() {
+        val calib = ExternalDisplayProto.ExternalDisplayCalibration.newBuilder()
+            .setIsCalibrating(true)
+            .setMacReferenceNits(200.0f)
+            .setMacAmbientLux(150.0f)
+            .setForceRecalibrate(false)
+            .setCalibratedBacklight(0.42f)
+            .build()
 
-        val failResult = ShellResult(1, "", "permission denied")
-        assertFalse(failResult.isSuccess)
+        val msg = ExternalDisplayProto.ExternalDisplayMessage.newBuilder()
+            .setEvent(ExternalDisplayProto.ExternalDisplayMessage.DisplayEventType.CALIBRATION_START)
+            .setCalibration(calib)
+            .setTimestamp(1700000000000L)
+            .build()
 
-        val stateDead: ShizukuState = ShizukuState.ServiceDead
-        val stateAuth: ShizukuState = ShizukuState.Authorized
-        val stateReq: ShizukuState = ShizukuState.PermissionRequired
+        val bytes = msg.toByteArray()
+        val parsed = ExternalDisplayProto.ExternalDisplayMessage.parseFrom(bytes)
 
-        assertEquals(ShizukuState.ServiceDead, stateDead)
-        assertEquals(ShizukuState.Authorized, stateAuth)
-        assertEquals(ShizukuState.PermissionRequired, stateReq)
+        assertEquals(ExternalDisplayProto.ExternalDisplayMessage.DisplayEventType.CALIBRATION_START, parsed.event)
+        assertTrue(parsed.calibration.isCalibrating)
+        assertEquals(200.0f, parsed.calibration.macReferenceNits, 0.001f)
+        assertEquals(150.0f, parsed.calibration.macAmbientLux, 0.001f)
+        assertFalse(parsed.calibration.forceRecalibrate)
+        assertEquals(0.42f, parsed.calibration.calibratedBacklight, 0.001f)
+    }
+
+    @Test
+    fun testExternalDisplayBrightnessSerialization() {
+        val brightness = ExternalDisplayProto.ExternalDisplayBrightness.newBuilder()
+            .setTargetNits(195.5f)
+            .setMacAmbientLux(120.0f)
+            .setMacLinearBrightness(0.38f)
+            .setTimestamp(1700000000000L)
+            .build()
+
+        val msg = ExternalDisplayProto.ExternalDisplayMessage.newBuilder()
+            .setEvent(ExternalDisplayProto.ExternalDisplayMessage.DisplayEventType.BRIGHTNESS_UPDATE)
+            .setBrightness(brightness)
+            .setTimestamp(1700000000000L)
+            .build()
+
+        val bytes = msg.toByteArray()
+        val parsed = ExternalDisplayProto.ExternalDisplayMessage.parseFrom(bytes)
+
+        assertEquals(ExternalDisplayProto.ExternalDisplayMessage.DisplayEventType.BRIGHTNESS_UPDATE, parsed.event)
+        assertEquals(195.5f, parsed.brightness.targetNits, 0.001f)
+        assertEquals(120.0f, parsed.brightness.macAmbientLux, 0.001f)
+        assertEquals(0.38f, parsed.brightness.macLinearBrightness, 0.001f)
+        assertEquals(1700000000000L, parsed.brightness.timestamp)
     }
 }

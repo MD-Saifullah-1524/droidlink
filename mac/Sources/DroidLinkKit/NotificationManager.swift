@@ -224,6 +224,36 @@ public final class NotificationManager: NSObject, @unchecked Sendable {
             iconData: testIconData
         )
     }
+
+    /// Displays a native notification when a file is received from Android and saved into Downloads/Droidlink
+    public func postFileReceivedNotification(fileName: String, fileUrl: URL) {
+        guard isSupported else {
+            print("📁 File received from Android: \(fileName) at \(fileUrl.path)")
+            fflush(stdout)
+            return
+        }
+
+        let content = UNMutableNotificationContent()
+        content.title = "File Received from Android"
+        content.body = "\(fileName) saved to Downloads/Droidlink"
+        content.sound = .default
+        content.userInfo = ["file_path": fileUrl.path]
+
+        let request = UNNotificationRequest(
+            identifier: "droidlink_file_\(UUID().uuidString)",
+            content: content,
+            trigger: nil
+        )
+
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("❌ Failed to deliver file received notification: \(error)")
+            } else {
+                print("🔔 File received notification posted for: \(fileName)")
+            }
+            fflush(stdout)
+        }
+    }
 }
 
 // MARK: - UNUserNotificationCenterDelegate
@@ -247,8 +277,15 @@ extension NotificationManager: UNUserNotificationCenterDelegate {
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        DispatchQueue.main.async {
-            NSApp.activate(ignoringOtherApps: true)
+        if let filePath = response.notification.request.content.userInfo["file_path"] as? String {
+            let url = URL(fileURLWithPath: filePath)
+            DispatchQueue.main.async {
+                NSWorkspace.shared.activateFileViewerSelecting([url])
+            }
+        } else {
+            DispatchQueue.main.async {
+                NSApp.activate(ignoringOtherApps: true)
+            }
         }
         completionHandler()
     }

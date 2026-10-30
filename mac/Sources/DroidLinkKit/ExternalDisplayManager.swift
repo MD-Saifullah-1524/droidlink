@@ -25,6 +25,10 @@ final class ExternalDisplayManager: ObservableObject {
     @Published var streamFps: Double = 0.0
     @Published var streamBitrateKbps: Int32 = 8000
     @Published var errorMessage: String? = nil
+    @Published var isNitsSyncEnabled: Bool = true
+    @Published var currentMacNits: Float = 200.0
+    @Published var currentMacLux: Float = 150.0
+    @Published var isCalibrationActive: Bool = false
 
     private let virtualDisplayBridge = VirtualDisplayBridge()
     private let h264Encoder = H264EncoderEngine()
@@ -172,6 +176,7 @@ final class ExternalDisplayManager: ObservableObject {
                         hiDPI: hiDPI,
                         bitrateKbps: bitrateKbps
                     )
+                    self.startLuminanceSynchronization()
                     print("✅ External Display session active on display ID \(displayID)")
                 }
             } catch {
@@ -214,6 +219,7 @@ final class ExternalDisplayManager: ObservableObject {
     /// Stops the external display session and cleanly deregisters the virtual display
     func stopExternalDisplay(notifyRemote: Bool = true) {
         stopHeartbeatWatchdog()
+        stopLuminanceSynchronization()
         guard isDisplayActive || activeDisplayID != nil else { return }
         print("🖥️ Stopping External Display session and deregistering virtual monitor...")
 
@@ -278,9 +284,84 @@ final class ExternalDisplayManager: ObservableObject {
             ack.timestamp = Int64(Date().timeIntervalSince1970 * 1000)
             dispatchExternalDisplayMessage(ack)
 
+        case .calibrationComplete:
+            let calib = message.calibration
+            print("🎯 ExternalDisplayManager: Android confirmed calibration! Calibrated Backlight: \(calib.calibratedBacklight)")
+            self.isCalibrationActive = false
+            // Immediately dispatch live target nits to Android
+            let nits = MacLuminanceMonitor.shared.getCurrentPhysicalNits()
+            let lux = MacLuminanceMonitor.shared.getCurrentAmbientLux()
+            let linear = MacLuminanceMonitor.shared.getCurrentLinearBrightness()
+            sendBrightnessUpdate(nits: nits, lux: lux, linear: linear)
+
         default:
             break
         }
+    }
+
+    // MARK: - Luminance & Calibration Synchronization (Way 2 & Way 4)
+
+    /// Starts real-time Mac luminance monitoring and sends the initial calibration handshake
+    private func startLuminanceSynchronization() {
+        // Send initial mandatory calibration request (Way 2)
+        var calibMsg = Droidlink_Protocol_ExternalDisplayMessage()
+        calibMsg.event = .calibrationStart
+        calibMsg.calibration.isCalibrating = true
+        calibMsg.calibration.macReferenceNits = MacLuminanceMonitor.shared.referenceCalibrationNits // 200.0 nits
+        calibMsg.calibration.macAmbientLux = MacLuminanceMonitor.shared.getCurrentAmbientLux()
+        calibMsg.timestamp = Int64(Date().timeIntervalSince1970 * 1000)
+        dispatchExternalDisplayMessage(calibMsg)
+        self.isCalibrationActive = true
+
+        // Start continuous debounced observer (Way 4 dynamic sync)
+        MacLuminanceMonitor.shared.startMonitoring { [weak self] targetNits, ambientLux, linearBrightness in
+            guard let self = self else { return }
+            Task { @MainActor in
+                self.currentMacNits = targetNits
+                self.currentMacLux = ambientLux
+                if self.isNitsSyncEnabled && !self.isCalibrationActive {
+                    self.sendBrightnessUpdate(nits: targetNits, lux: ambientLux, linear: linearBrightness)
+                }
+            }
+        }
+    }
+
+    /// Stops Mac luminance monitoring
+    private func stopLuminanceSynchronization() {
+        MacLuminanceMonitor.shared.stopMonitoring()
+        self.isCalibrationActive = false
+    }
+
+    /// Forces a mandatory visual recalibration on Android
+    func triggerRecalibration() {
+        guard isDisplayActive else { return }
+        print("🎯 ExternalDisplayManager: Manually triggering visual recalibration wizard")
+        self.isCalibrationActive = true
+        var calibMsg = Droidlink_Protocol_ExternalDisplayMessage()
+        calibMsg.event = .calibrationStart
+        calibMsg.calibration.isCalibrating = true
+        calibMsg.calibration.forceRecalibrate = true
+        calibMsg.calibration.macReferenceNits = MacLuminanceMonitor.shared.referenceCalibrationNits
+        calibMsg.calibration.macAmbientLux = MacLuminanceMonitor.shared.getCurrentAmbientLux()
+        calibMsg.timestamp = Int64(Date().timeIntervalSince1970 * 1000)
+        dispatchExternalDisplayMessage(calibMsg)
+    }
+
+    /// Dispatches real-time target nits to Android
+    func sendBrightnessUpdate(nits: Float, lux: Float, linear: Float) {
+        guard isDisplayActive, isNitsSyncEnabled else { return }
+        var bMsg = Droidlink_Protocol_ExternalDisplayBrightness()
+        bMsg.targetNits = nits
+        bMsg.macAmbientLux = lux
+        bMsg.macLinearBrightness = linear
+        bMsg.timestamp = Int64(Date().timeIntervalSince1970 * 1000)
+
+        var msg = Droidlink_Protocol_ExternalDisplayMessage()
+        msg.event = .brightnessUpdate
+        msg.brightness = bMsg
+        msg.timestamp = Int64(Date().timeIntervalSince1970 * 1000)
+
+        dispatchExternalDisplayMessage(msg)
     }
 
     // MARK: - Private Helpers

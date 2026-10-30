@@ -17,6 +17,9 @@ message ExternalDisplayMessage {
     CONFIG_UPDATE = 7;      // Dynamic resolution or refresh rate change
     HEARTBEAT = 8;          // Keepalive / latency probe
     ERROR = 9;              // Error message
+    CALIBRATION_START = 10;   // Initiate mandatory visual calibration
+    CALIBRATION_COMPLETE = 11;// Android confirmed calibration completed
+    BRIGHTNESS_UPDATE = 12;   // Continuous target luminance & ambient lux update
   }
 
   DisplayEventType event = 1;
@@ -35,6 +38,29 @@ message ExternalDisplayMessage {
 
   // Timestamp in milliseconds
   int64 timestamp = 6;
+
+  // Visual calibration payload (for CALIBRATION_START / CALIBRATION_COMPLETE)
+  ExternalDisplayCalibration calibration = 7;
+
+  // Real-time luminance payload (for BRIGHTNESS_UPDATE)
+  ExternalDisplayBrightness brightness = 8;
+}
+
+// Visual calibration parameters for luminance matching
+message ExternalDisplayCalibration {
+  bool is_calibrating = 1;
+  float mac_reference_nits = 2; // Reference luminance (default 200.0 nits)
+  float mac_ambient_lux = 3;    // Current Mac ambient illuminance
+  bool force_recalibrate = 4;   // Triggered manually from HUD
+  float calibrated_backlight = 5; // Calibrated Android backlight float (0.0 to 1.0)
+}
+
+// Continuous real-time luminance & ambient illuminance sync
+message ExternalDisplayBrightness {
+  float target_nits = 1;         // Real-time Mac luminance in cd/m² (e.g. 195.0)
+  float mac_ambient_lux = 2;     // Mac ambient light sensor lux
+  float mac_linear_brightness = 3; // Linear scale (0.0 to 1.0)
+  int64 timestamp = 4;
 }
 
 // Configuration for virtual display session

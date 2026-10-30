@@ -53,6 +53,10 @@ class AndroidFileSystemManagerTest {
         val rootFile = fsManager.resolveSafeFile("")
         assertEquals(tempRoot.canonicalPath, rootFile.canonicalPath)
 
+        // Downloads normalization to Download
+        val normalizedFile = fsManager.resolveSafeFile("Downloads/DroidLink/sample.txt")
+        assertEquals(File(tempRoot, "Download/DroidLink/sample.txt").canonicalPath, normalizedFile.canonicalPath)
+
         // Traversal attack attempt
         try {
             fsManager.resolveSafeFile("../../etc/passwd")
@@ -93,6 +97,32 @@ class AndroidFileSystemManagerTest {
         assertEquals(1, page2Items.size)
         assertEquals("doc_b.txt", page2Items[0].name)
         assertEquals(null, page2Token)
+    }
+
+    @Test
+    fun testDotfilesPreservedForFinder() {
+        val notesDir = File(tempRoot, "Notes").apply { mkdirs() }
+        File(notesDir, ".nomedia").createNewFile()
+        File(notesDir, ".hidden_config").writeText("secret=1")
+        File(notesDir, "visible.txt").writeText("visible")
+
+        val (items, _) = fsManager.enumerateDirectory("Notes")
+        assertEquals(3, items.size)
+        assertTrue(items.any { it.name == ".nomedia" })
+        assertTrue(items.any { it.name == ".hidden_config" })
+        assertTrue(items.any { it.name == "visible.txt" })
+    }
+
+    @Test
+    fun testDefaultPageSizeDoesNotTruncateAt250() {
+        val largeDir = File(tempRoot, "LargeFolder").apply { mkdirs() }
+        for (i in 1..300) {
+            File(largeDir, "item_%03d.txt".format(i)).createNewFile()
+        }
+
+        val (items, nextToken) = fsManager.enumerateDirectory("LargeFolder")
+        assertEquals(300, items.size)
+        assertEquals(null, nextToken)
     }
 
     @Test

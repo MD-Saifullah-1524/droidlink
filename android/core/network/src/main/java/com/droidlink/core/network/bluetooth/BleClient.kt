@@ -237,11 +237,16 @@ class BleClient(
                 newGatt.writeDescriptor(cccd)
             }
             try {
-                withTimeout(3000) {
-                    cccdDeferred?.await()
+                withTimeout(4000) {
+                    val ok = cccdDeferred?.await() == true
+                    if (ok) {
+                        Log.d(TAG, "CCCD notification subscription confirmed")
+                    } else {
+                        Log.w(TAG, "CCCD notification subscription returned status failure")
+                    }
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "CCCD descriptor write timed out")
+                Log.w(TAG, "CCCD descriptor write timed out, continuing: ${e.message}")
             }
         }
 

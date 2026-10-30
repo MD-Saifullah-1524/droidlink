@@ -45,8 +45,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let contentView = ContentView(viewModel: vm)
         window.contentView = NSHostingView(rootView: contentView)
         window.makeKeyAndOrderFront(nil)
-        
-        _ = ScreenMirroringWindowController.shared
 
         app.activate(ignoringOtherApps: true)
         
@@ -268,11 +266,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             forName: .droidlinkDeviceConnected,
             object: nil,
             queue: .main
-        ) { [weak self] _ in
+        ) { [weak self] notif in
+            let paired = PairingStorage.loadPairedDevice()
+            let devName = (notif.object as? String) ?? paired?.deviceName ?? "Device"
             Task { @MainActor in
-                self?.statusMenuItem?.title = "DroidLink: Connected"
+                self?.statusMenuItem?.title = "DroidLink: Connected to \(devName)"
                 self?.disconnectMenuItem?.isEnabled = true
-                self?.statusItem?.button?.toolTip = "DroidLink: Connected"
+                self?.statusItem?.button?.toolTip = "DroidLink: Connected to \(devName)"
+                self?.updateMenuBarIcon(state: .connected)
+            }
+        }
+
+        let usbConnectedObserver = NotificationCenter.default.addObserver(
+            forName: .droidlinkUsbConnected,
+            object: nil,
+            queue: .main
+        ) { [weak self] notif in
+            let paired = PairingStorage.loadPairedDevice()
+            let devName = paired?.deviceName ?? (notif.object as? String) ?? "Device (USB)"
+            Task { @MainActor in
+                self?.statusMenuItem?.title = "DroidLink: Connected to \(devName)"
+                self?.disconnectMenuItem?.isEnabled = true
+                self?.statusItem?.button?.toolTip = "DroidLink: Connected to \(devName)"
+                self?.updateMenuBarIcon(state: .connected)
+            }
+        }
+
+        let statusObserver = NotificationCenter.default.addObserver(
+            forName: .droidlinkDeviceStatusReceived,
+            object: nil,
+            queue: .main
+        ) { [weak self] notif in
+            guard let status = notif.object as? DeviceStatusInfo else { return }
+            let name = !status.deviceName.isEmpty ? status.deviceName : "Device"
+            Task { @MainActor in
+                self?.statusMenuItem?.title = "DroidLink: Connected to \(name) (\(status.batteryLevel)%)"
+                self?.disconnectMenuItem?.isEnabled = true
+                self?.statusItem?.button?.toolTip = "DroidLink: Connected to \(name) (\(status.batteryLevel)%)"
                 self?.updateMenuBarIcon(state: .connected)
             }
         }
@@ -283,6 +313,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor in
+                if AoaUsbManager.shared.isConnected { return }
+                let title = PairingStorage.isPaired ? "DroidLink: Waiting for paired device" : "DroidLink: Disconnected"
+                self?.statusMenuItem?.title = title
+                self?.disconnectMenuItem?.isEnabled = false
+                self?.statusItem?.button?.toolTip = title
+                self?.updateMenuBarIcon(state: .disconnected)
+            }
+        }
+
+        let usbDisconnectedObserver = NotificationCenter.default.addObserver(
+            forName: .droidlinkUsbDisconnected,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                if let vm = self?.viewModel, case .connected = vm.state { return }
                 let title = PairingStorage.isPaired ? "DroidLink: Waiting for paired device" : "DroidLink: Disconnected"
                 self?.statusMenuItem?.title = title
                 self?.disconnectMenuItem?.isEnabled = false
@@ -310,7 +356,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             suspensionBehavior: .deliverImmediately
         )
 
-        notifObservers = [connectedObserver, disconnectedObserver, incognitoObserver]
+        notifObservers = [connectedObserver, usbConnectedObserver, statusObserver, disconnectedObserver, usbDisconnectedObserver, incognitoObserver]
     }
 
     @objc private func handleDistributedOpenMainWindow(_ notification: Notification) {

@@ -433,6 +433,8 @@ struct Droidlink_Protocol_ExternalDisplayMessage: @unchecked Sendable, Equatable
     4: .same(proto: "input"),
     5: .same(proto: "message"),
     6: .same(proto: "timestamp"),
+    7: .same(proto: "calibration"),
+    8: .same(proto: "brightness"),
   ]
 
   enum DisplayEventType: SwiftProtobuf.Enum, Swift.CaseIterable {
@@ -447,6 +449,9 @@ struct Droidlink_Protocol_ExternalDisplayMessage: @unchecked Sendable, Equatable
     case configUpdate // = 7
     case heartbeat // = 8
     case error // = 9
+    case calibrationStart // = 10
+    case calibrationComplete // = 11
+    case brightnessUpdate // = 12
     case UNRECOGNIZED(Int)
 
     init() { self = .eventUnknown }
@@ -463,6 +468,9 @@ struct Droidlink_Protocol_ExternalDisplayMessage: @unchecked Sendable, Equatable
       case 7: self = .configUpdate
       case 8: self = .heartbeat
       case 9: self = .error
+      case 10: self = .calibrationStart
+      case 11: self = .calibrationComplete
+      case 12: self = .brightnessUpdate
       default: self = .UNRECOGNIZED(rawValue)
       }
     }
@@ -479,13 +487,17 @@ struct Droidlink_Protocol_ExternalDisplayMessage: @unchecked Sendable, Equatable
       case .configUpdate: return 7
       case .heartbeat: return 8
       case .error: return 9
+      case .calibrationStart: return 10
+      case .calibrationComplete: return 11
+      case .brightnessUpdate: return 12
       case .UNRECOGNIZED(let i): return i
       }
     }
 
     static let allCases: [DisplayEventType] = [
       .eventUnknown, .startRequest, .startResponse, .started, .stop,
-      .videoFrame, .inputEvent, .configUpdate, .heartbeat, .error
+      .videoFrame, .inputEvent, .configUpdate, .heartbeat, .error,
+      .calibrationStart, .calibrationComplete, .brightnessUpdate
     ]
   }
 
@@ -512,6 +524,18 @@ struct Droidlink_Protocol_ExternalDisplayMessage: @unchecked Sendable, Equatable
   var message: String = String()
   var timestamp: Int64 = 0
 
+  var calibration: Droidlink_Protocol_ExternalDisplayCalibration {
+    get { return _calibration ?? Droidlink_Protocol_ExternalDisplayCalibration() }
+    set { _calibration = newValue }
+  }
+  private var _calibration: Droidlink_Protocol_ExternalDisplayCalibration? = nil
+
+  var brightness: Droidlink_Protocol_ExternalDisplayBrightness {
+    get { return _brightness ?? Droidlink_Protocol_ExternalDisplayBrightness() }
+    set { _brightness = newValue }
+  }
+  private var _brightness: Droidlink_Protocol_ExternalDisplayBrightness? = nil
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -525,6 +549,8 @@ struct Droidlink_Protocol_ExternalDisplayMessage: @unchecked Sendable, Equatable
       case 4: try decoder.decodeSingularMessageField(value: &self._input)
       case 5: try decoder.decodeSingularStringField(value: &self.message)
       case 6: try decoder.decodeSingularInt64Field(value: &self.timestamp)
+      case 7: try decoder.decodeSingularMessageField(value: &self._calibration)
+      case 8: try decoder.decodeSingularMessageField(value: &self._brightness)
       default: break
       }
     }
@@ -549,6 +575,12 @@ struct Droidlink_Protocol_ExternalDisplayMessage: @unchecked Sendable, Equatable
     if self.timestamp != 0 {
       try visitor.visitSingularInt64Field(value: self.timestamp, fieldNumber: 6)
     }
+    if let v = self._calibration {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+    }
+    if let v = self._brightness {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -558,6 +590,127 @@ struct Droidlink_Protocol_ExternalDisplayMessage: @unchecked Sendable, Equatable
     if lhs._frame != rhs._frame { return false }
     if lhs._input != rhs._input { return false }
     if lhs.message != rhs.message { return false }
+    if lhs.timestamp != rhs.timestamp { return false }
+    if lhs._calibration != rhs._calibration { return false }
+    if lhs._brightness != rhs._brightness { return false }
+    if lhs.unknownFields != rhs.unknownFields { return false }
+    return true
+  }
+}
+
+struct Droidlink_Protocol_ExternalDisplayCalibration: @unchecked Sendable, Equatable, SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = "droidlink.protocol.ExternalDisplayCalibration"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "is_calibrating"),
+    2: .same(proto: "mac_reference_nits"),
+    3: .same(proto: "mac_ambient_lux"),
+    4: .same(proto: "force_recalibrate"),
+    5: .same(proto: "calibrated_backlight"),
+  ]
+
+  var isCalibrating: Bool = false
+  var macReferenceNits: Float = 0
+  var macAmbientLux: Float = 0
+  var forceRecalibrate: Bool = false
+  var calibratedBacklight: Float = 0
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      switch fieldNumber {
+      case 1: try decoder.decodeSingularBoolField(value: &self.isCalibrating)
+      case 2: try decoder.decodeSingularFloatField(value: &self.macReferenceNits)
+      case 3: try decoder.decodeSingularFloatField(value: &self.macAmbientLux)
+      case 4: try decoder.decodeSingularBoolField(value: &self.forceRecalibrate)
+      case 5: try decoder.decodeSingularFloatField(value: &self.calibratedBacklight)
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.isCalibrating != false {
+      try visitor.visitSingularBoolField(value: self.isCalibrating, fieldNumber: 1)
+    }
+    if self.macReferenceNits != 0 {
+      try visitor.visitSingularFloatField(value: self.macReferenceNits, fieldNumber: 2)
+    }
+    if self.macAmbientLux != 0 {
+      try visitor.visitSingularFloatField(value: self.macAmbientLux, fieldNumber: 3)
+    }
+    if self.forceRecalibrate != false {
+      try visitor.visitSingularBoolField(value: self.forceRecalibrate, fieldNumber: 4)
+    }
+    if self.calibratedBacklight != 0 {
+      try visitor.visitSingularFloatField(value: self.calibratedBacklight, fieldNumber: 5)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Droidlink_Protocol_ExternalDisplayCalibration, rhs: Droidlink_Protocol_ExternalDisplayCalibration) -> Bool {
+    if lhs.isCalibrating != rhs.isCalibrating { return false }
+    if lhs.macReferenceNits != rhs.macReferenceNits { return false }
+    if lhs.macAmbientLux != rhs.macAmbientLux { return false }
+    if lhs.forceRecalibrate != rhs.forceRecalibrate { return false }
+    if lhs.calibratedBacklight != rhs.calibratedBacklight { return false }
+    if lhs.unknownFields != rhs.unknownFields { return false }
+    return true
+  }
+}
+
+struct Droidlink_Protocol_ExternalDisplayBrightness: @unchecked Sendable, Equatable, SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = "droidlink.protocol.ExternalDisplayBrightness"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "target_nits"),
+    2: .same(proto: "mac_ambient_lux"),
+    3: .same(proto: "mac_linear_brightness"),
+    4: .same(proto: "timestamp"),
+  ]
+
+  var targetNits: Float = 0
+  var macAmbientLux: Float = 0
+  var macLinearBrightness: Float = 0
+  var timestamp: Int64 = 0
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      switch fieldNumber {
+      case 1: try decoder.decodeSingularFloatField(value: &self.targetNits)
+      case 2: try decoder.decodeSingularFloatField(value: &self.macAmbientLux)
+      case 3: try decoder.decodeSingularFloatField(value: &self.macLinearBrightness)
+      case 4: try decoder.decodeSingularInt64Field(value: &self.timestamp)
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.targetNits != 0 {
+      try visitor.visitSingularFloatField(value: self.targetNits, fieldNumber: 1)
+    }
+    if self.macAmbientLux != 0 {
+      try visitor.visitSingularFloatField(value: self.macAmbientLux, fieldNumber: 2)
+    }
+    if self.macLinearBrightness != 0 {
+      try visitor.visitSingularFloatField(value: self.macLinearBrightness, fieldNumber: 3)
+    }
+    if self.timestamp != 0 {
+      try visitor.visitSingularInt64Field(value: self.timestamp, fieldNumber: 4)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Droidlink_Protocol_ExternalDisplayBrightness, rhs: Droidlink_Protocol_ExternalDisplayBrightness) -> Bool {
+    if lhs.targetNits != rhs.targetNits { return false }
+    if lhs.macAmbientLux != rhs.macAmbientLux { return false }
+    if lhs.macLinearBrightness != rhs.macLinearBrightness { return false }
     if lhs.timestamp != rhs.timestamp { return false }
     if lhs.unknownFields != rhs.unknownFields { return false }
     return true

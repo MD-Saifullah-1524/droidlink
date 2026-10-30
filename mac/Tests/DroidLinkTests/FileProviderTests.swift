@@ -50,6 +50,8 @@ final class FileProviderTests: XCTestCase {
         XCTAssertEqual(dcimItem.itemIdentifier, NSFileProviderItemIdentifier("DCIM"))
         XCTAssertEqual(dcimItem.parentItemIdentifier, .rootContainer)
         XCTAssertEqual(dcimItem.contentType, .folder)
+        XCTAssertTrue(dcimItem.capabilities.contains(.allowsContentEnumerating))
+        XCTAssertTrue(dcimItem.capabilities.contains(.allowsAddingSubItems))
 
         // 3. Nested File (> 4 GB)
         var fileInfo = Droidlink_Protocol_FileInfo()
@@ -69,6 +71,14 @@ final class FileProviderTests: XCTestCase {
         XCTAssertTrue(fileItem.capabilities.contains(.allowsReading))
         XCTAssertTrue(fileItem.capabilities.contains(.allowsWriting))
         XCTAssertTrue(fileItem.capabilities.contains(.allowsDeleting))
+
+        // 4. File with generic application/octet-stream but known extension (.pdf)
+        var octetPdf = Droidlink_Protocol_FileInfo()
+        octetPdf.name = "invoice.pdf"
+        octetPdf.path = "Documents/invoice.pdf"
+        octetPdf.mimeType = "application/octet-stream"
+        let octetPdfItem = DroidLinkItem(fileInfo: octetPdf)
+        XCTAssertEqual(octetPdfItem.contentType, .pdf)
     }
 
     func testFileProviderIPCRoundtrip() async throws {
@@ -124,6 +134,12 @@ final class FileProviderTests: XCTestCase {
         XCTAssertEqual(files[1].name, "Documents")
         XCTAssertEqual(nextToken, "token_page_2")
 
+        // Test metadata cache pre-population (should hit cache directly without server mock for getMetadata)
+        let cachedDownloadInfo = try client.getMetadata(path: "Download")
+        XCTAssertNotNil(cachedDownloadInfo)
+        XCTAssertEqual(cachedDownloadInfo?.name, "Download")
+        XCTAssertTrue(cachedDownloadInfo?.isDirectory == true)
+
         // Test readChunk via client with 64-bit offset (5 GB)
         let (data, isEof, totalSize) = try client.readChunk(
             path: "Download/HugeVideo.mp4",
@@ -133,5 +149,18 @@ final class FileProviderTests: XCTestCase {
         XCTAssertEqual(data.count, 4)
         XCTAssertEqual(totalSize, 10_000_000_000)
         XCTAssertFalse(isEof)
+    }
+
+    @MainActor
+    func testEnumeratorChangeSyncAnchor() async throws {
+        let client = FileProviderIPCClient(port: 29996)
+        let enumerator = DroidLinkEnumerator(enumeratedItemIdentifier: NSFileProviderItemIdentifier("DCIM"), ipcClient: client)
+        
+        let anchor = await withCheckedContinuation { continuation in
+            enumerator.currentSyncAnchor { anchor in
+                continuation.resume(returning: anchor)
+            }
+        }
+        XCTAssertNotNil(anchor)
     }
 }

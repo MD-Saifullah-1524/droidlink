@@ -6,5 +6,16 @@
     <string name="connected">Connected to %s</string>
     <string name="disconnect">Disconnect</string>
     <string name="qr_pairing_instructions">Scan the QR code displayed on your Mac</string>
-    <string name="accessibility_service_description">Enables DroidLink to control your screen using mouse, trackpad, and keyboard from your Mac without ADB.</string>
+    <string name="accessibility_service_label">DroidLink Clipboard Sync</string>
+    <string name="accessibility_service_description">Enables DroidLink to automatically detect when you copy text across your apps and seamlessly sync it to your Mac.</string>
+    <string name="tile_clipboard_label">Send to Mac</string>
+    <string name="send_to_mac">Send to Mac</string>
+    <string name="share_to_mac">Send to Mac</string>
+    <string name="file_transfer_channel">File Transfers</string>
+    <string name="file_transfer_sending">Sending to Mac: %s</string>
+    <string name="file_transfer_sent">Sent to Mac: %s</string>
+    <string name="file_transfer_received_title">File Received from Mac</string>
+    <string name="file_transfer_received_desc">%s saved in Downloads/DroidLink</string>
+    <string name="file_transfer_failed">File transfer failed: %s</string>
+    <string name="not_connected_to_mac">Mac is not connected. Please connect DroidLink first.</string>
 </resources>

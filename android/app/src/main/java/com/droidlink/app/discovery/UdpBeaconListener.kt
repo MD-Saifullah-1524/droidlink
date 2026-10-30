@@ -35,6 +35,7 @@ class UdpBeaconListener(private val context: Context) {
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var isRunning = false
+    private var lastBeaconProcessTime = 0L
 
     fun startListening() {
         if (isRunning) return
@@ -83,15 +84,20 @@ class UdpBeaconListener(private val context: Context) {
             val macHost = json.optString("host")
             val macPort = json.optInt("port", 9999)
             val macDeviceId = json.optString("deviceId")
+            val macDeviceName = json.optString("deviceName")
 
             val storage = PairingStorage(context)
             val paired = storage.getPairedDevice() ?: return
 
             val matchesDevice = (macDeviceId.isNotEmpty() && paired.deviceId.isNotEmpty() && macDeviceId == paired.deviceId)
             val matchesHost = (macHost.isNotBlank() && paired.host.isNotBlank() && macHost == paired.host)
+            val matchesName = (macDeviceName.isNotBlank() && paired.deviceName.isNotBlank() && 
+                (macDeviceName.equals(paired.deviceName, ignoreCase = true) || 
+                 paired.deviceName.contains(macDeviceName, ignoreCase = true) || 
+                 macDeviceName.contains(paired.deviceName, ignoreCase = true)))
 
-            if (!matchesDevice && !matchesHost) {
-                Log.d(TAG, "Ignoring beacon from different device: $macDeviceId (paired with ${paired.deviceId})")
+            if (!matchesDevice && !matchesHost && !matchesName) {
+                Log.d(TAG, "Ignoring beacon from different device: $macDeviceId ($macDeviceName) (paired with ${paired.deviceId} / ${paired.deviceName})")
                 return
             }
 
@@ -110,14 +116,19 @@ class UdpBeaconListener(private val context: Context) {
                 return
             }
 
+            val now = System.currentTimeMillis()
+            if (now - lastBeaconProcessTime < 2000L) {
+                return
+            }
+            lastBeaconProcessTime = now
+
             Log.i(TAG, "🔔 Detected MAC_ONLINE beacon from ${paired.deviceName} at $macHost:$macPort. Auto-connecting...")
 
             val targetHost = if (macHost.isNotBlank()) macHost else paired.host
             val targetPort = if (macPort > 0) macPort else paired.port
 
-            if (targetHost != paired.host || targetPort != paired.port) {
-                storage.savePairedDevice(paired.copy(host = targetHost, port = targetPort))
-            }
+            val updatedDeviceId = if (macDeviceId.isNotBlank() && macDeviceId != paired.deviceId) macDeviceId else paired.deviceId
+            storage.savePairedDevice(paired.copy(deviceId = updatedDeviceId, host = targetHost, port = targetPort))
 
             DroidLinkService.start(
                 context = context,

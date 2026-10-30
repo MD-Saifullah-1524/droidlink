@@ -1,6 +1,7 @@
 package com.droidlink.app.ui.main
 
 import android.app.NotificationManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
@@ -12,6 +13,7 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.provider.Settings
+import android.text.TextUtils
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -104,17 +106,8 @@ class MainViewModel(private val context: Context) : ViewModel() {
     private val _hasPostNotificationPermission = MutableStateFlow(checkPostNotificationPermission())
     val hasPostNotificationPermission: StateFlow<Boolean> = _hasPostNotificationPermission.asStateFlow()
 
-    private val _isMediaProjectionGranted = MutableStateFlow(DroidLinkService.mediaProjection != null)
-    val isMediaProjectionGranted: StateFlow<Boolean> = _isMediaProjectionGranted.asStateFlow()
-
-    private val _isAccessibilityEnabled = MutableStateFlow(com.droidlink.app.service.DroidLinkAccessibilityService.isEnabled)
-    val isAccessibilityEnabled: StateFlow<Boolean> = _isAccessibilityEnabled.asStateFlow()
-
-    private val _isOverlayPermissionGranted = MutableStateFlow(Settings.canDrawOverlays(context))
-    val isOverlayPermissionGranted: StateFlow<Boolean> = _isOverlayPermissionGranted.asStateFlow()
-
-    private val _isWriteSettingsGranted = MutableStateFlow(Settings.System.canWrite(context))
-    val isWriteSettingsGranted: StateFlow<Boolean> = _isWriteSettingsGranted.asStateFlow()
+    private val _hasAccessibilityPermission = MutableStateFlow(checkAccessibilityPermission())
+    val hasAccessibilityPermission: StateFlow<Boolean> = _hasAccessibilityPermission.asStateFlow()
 
     private val telemetryCollector = com.droidlink.app.telemetry.AndroidTelemetryCollector(context)
     private val _localDeviceStatus = MutableStateFlow(telemetryCollector.collectStatus())
@@ -123,17 +116,6 @@ class MainViewModel(private val context: Context) : ViewModel() {
     // USB Connection State
     val isUsbConnected: StateFlow<Boolean> = DroidLinkService.isUsbConnected
 
-    // Screen Mirroring State
-    val isScreenMirroringActive: StateFlow<Boolean> = DroidLinkService.isScreenMirroringActive
-
-    fun startScreenMirroring() {
-        DroidLinkService.startScreenMirroringSession()
-    }
-
-    fun stopScreenMirroring() {
-        DroidLinkService.stopScreenMirroringSession()
-    }
-
     fun triggerTestClipboardSync(): String {
         val testText = "DroidLink Sync Test #${(1000..9999).random()}"
         val clip = android.content.ClipData.newPlainText("DroidLink", testText)
@@ -141,13 +123,6 @@ class MainViewModel(private val context: Context) : ViewModel() {
         clipboard.setPrimaryClip(clip)
         DroidLinkService.triggerClipboardSync()
         return testText
-    }
-
-    // Shizuku Zero-ADB Privileged Mode
-    val shizukuState: StateFlow<com.droidlink.app.shizuku.ShizukuState> = com.droidlink.app.shizuku.ShizukuManager.state
-
-    fun requestShizukuPermission() {
-        com.droidlink.app.shizuku.ShizukuManager.requestPermission()
     }
 
     fun launchExternalDisplay(width: Int = 0, height: Int = 0, scaleFactor: Float = 2.0f) {
@@ -163,6 +138,32 @@ class MainViewModel(private val context: Context) : ViewModel() {
 
     companion object {
         private const val TAG = "MainViewModel"
+    }
+
+    private var autoConnectJob: kotlinx.coroutines.Job? = null
+
+    fun startAutoConnectTicker() {
+        autoConnectJob?.cancel()
+        autoConnectJob = viewModelScope.launch {
+            var isInitial = true
+            while (isActive) {
+                if (!isInitial) {
+                    delay(5000) // Fixed interval: retry connection every 5 seconds if not connected
+                }
+                isInitial = false
+
+                val paired = pairingStorage.getPairedDevice()
+                val currentServiceState = DroidLinkService.connectionState.value
+                val isManuallyDisconnected = pairingStorage.isManuallyDisconnected()
+
+                if (paired != null && !isManuallyDisconnected) {
+                    if (currentServiceState !is ServiceConnectionState.Connected && currentServiceState !is ServiceConnectionState.Connecting) {
+                        Log.d(TAG, "🔄 Auto-connect ticker: initiating connection to ${paired.deviceName}")
+                        connectToDevice(paired)
+                    }
+                }
+            }
+        }
     }
 
     init {
@@ -215,16 +216,11 @@ class MainViewModel(private val context: Context) : ViewModel() {
             }
         }
 
-        // Auto-connect to paired device on startup if present and not manually disconnected
+        // On launch: always initiate auto-connect if paired device exists
         val paired = pairingStorage.getPairedDevice()
-        if (paired != null && DroidLinkService.connectionState.value !is ServiceConnectionState.Connected) {
-            if (pairingStorage.isManuallyDisconnected()) {
-                Log.d(TAG, "Paired device was manually disconnected; staying disconnected on startup.")
-                _uiState.value = MainUiState.Paired(paired.deviceName, paired.deviceModel)
-            } else {
-                Log.d(TAG, "Auto-connecting to stored paired device: ${paired.deviceName} (${paired.bluetoothAddress})")
-                connectToDevice(paired)
-            }
+        if (paired != null) {
+            pairingStorage.setManuallyDisconnected(false)
+            startAutoConnectTicker()
         }
 
         loadInstalledApps()
@@ -240,46 +236,34 @@ class MainViewModel(private val context: Context) : ViewModel() {
         _hasNotificationListenerPermission.value = checkNotificationListenerPermission()
         _hasBluetoothPermission.value = checkBluetoothPermission()
         _hasPostNotificationPermission.value = checkPostNotificationPermission()
-        _isMediaProjectionGranted.value = (DroidLinkService.mediaProjection != null)
-        _isAccessibilityEnabled.value = com.droidlink.app.service.DroidLinkAccessibilityService.isEnabled
-        _isOverlayPermissionGranted.value = Settings.canDrawOverlays(context)
-        _isWriteSettingsGranted.value = Settings.System.canWrite(context)
+        _hasAccessibilityPermission.value = checkAccessibilityPermission()
     }
 
-    fun openOverlaySettings() {
-        try {
-            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}")).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    fun checkAccessibilityPermission(): Boolean {
+        return try {
+            val expectedComponentName = ComponentName(context, com.droidlink.app.service.DroidLinkAccessibilityService::class.java)
+            val enabledServices = Settings.Secure.getString(
+                context.contentResolver,
+                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+            ) ?: return false
+            val colonSplitter = TextUtils.SimpleStringSplitter(':')
+            colonSplitter.setString(enabledServices)
+            while (colonSplitter.hasNext()) {
+                val componentNameString = colonSplitter.next()
+                val enabledComponent = ComponentName.unflattenFromString(componentNameString)
+                if (enabledComponent != null && enabledComponent == expectedComponentName) {
+                    return true
+                }
             }
-            context.startActivity(intent)
+            false
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to open overlay settings", e)
+            false
         }
     }
 
-    fun openWriteSettings() {
-        try {
-            val intent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:${context.packageName}")).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(intent)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to open write settings", e)
-        }
-    }
-
-    fun updateMediaProjectionGranted(granted: Boolean) {
-        _isMediaProjectionGranted.value = granted
-    }
-
-    fun openAccessibilitySettings() {
-        try {
-            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(intent)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to open accessibility settings", e)
+    fun getAccessibilitySettingsIntent(): Intent {
+        return Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
     }
 
@@ -494,6 +478,7 @@ class MainViewModel(private val context: Context) : ViewModel() {
         val paired = pairingStorage.getPairedDevice()
         if (paired != null) {
             connectToDevice(paired)
+            startAutoConnectTicker()
         } else {
             startPairing()
         }
@@ -565,6 +550,7 @@ class MainViewModel(private val context: Context) : ViewModel() {
                 )
                 pairingStorage.savePairedDevice(stored)
                 connectToDevice(stored)
+                startAutoConnectTicker()
             } catch (e: Exception) {
                 Log.e(TAG, "Pairing failed", e)
                 _uiState.value = MainUiState.Error("Pairing failed: ${e.message}")
@@ -573,6 +559,7 @@ class MainViewModel(private val context: Context) : ViewModel() {
     }
 
     fun disconnect() {
+        autoConnectJob?.cancel()
         pairingStorage.setManuallyDisconnected(true)
         DroidLinkService.stop(context)
         val paired = pairingStorage.getPairedDevice()
@@ -585,6 +572,7 @@ class MainViewModel(private val context: Context) : ViewModel() {
 
     fun forgetDevice() {
         Log.d(TAG, "forgetDevice called")
+        autoConnectJob?.cancel()
         pairingStorage.clear()
         DroidLinkService.stop(context)
         _uiState.value = MainUiState.Disconnected
@@ -602,6 +590,7 @@ class MainViewModel(private val context: Context) : ViewModel() {
 
     override fun onCleared() {
         super.onCleared()
+        autoConnectJob?.cancel()
         bleScanner.stopScan()
     }
 
@@ -638,6 +627,7 @@ class MainViewModel(private val context: Context) : ViewModel() {
             val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
             val clip = android.content.ClipData.newPlainText("DroidLink", text)
             cm.setPrimaryClip(clip)
+            DroidLinkService.sendClipboardDirect(text)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to set clipboard", e)
         }

@@ -1,74 +1,72 @@
 # DroidLink Protocol Definitions
 
-This directory contains the Protocol Buffer schemas for DroidLink communication.
+This directory contains the Protocol Buffer schemas for all DroidLink cross-platform communication.
 
-## Overview
+---
 
-All communication between Android and Mac devices uses Protocol Buffers for efficient, binary serialization with built-in backward compatibility.
+## 📋 Overview
 
-## Files
+Communication between Android and macOS devices uses **Protocol Buffers v3** for strongly-typed, binary serialization with backwards and forwards compatibility.
 
-- **droidlink.proto** - Root message type and message type enum
-- **system.proto** - Connection lifecycle (HELLO, HEARTBEAT, ERROR)
-- **clipboard.proto** - Clipboard synchronization
-- **notification.proto** - Notification mirroring
-- **file.proto** - File transfer operations
-- **screen.proto** - Screen mirroring (H.264 streaming)
-- **media.proto** - Virtual webcam and microphone
-- **call.proto** - Call handling
+---
 
-## Message Framing
+## 📂 Schemas Catalog
 
-Every Protocol Buffer message is framed with a 4-byte header:
+All schemas reside in [`protocol/protos/`](protos/):
+
+| Schema File | Package / Class | Purpose |
+|:---|:---|:---|
+| **`droidlink_messages.proto`** | `droidlink.protocol.DroidLinkMessage` | Root envelope wrapping all feature payloads |
+| **`external_display_messages.proto`**| `droidlink.protocol.ExternalDisplayMessage` | External Display session lifecycle, H.264 video frames, touch/mouse input injection, and luminance/ambient sensor sync |
+| **`file_messages.proto`** | `droidlink.protocol.FileMessage` | Native macOS FileProvider operations (directory enumeration, 64-bit chunked read/write, file watching) |
+| **`clipboard_messages.proto`** | `droidlink.protocol.ClipboardMessage` | Bi-directional clipboard synchronization of text and links |
+| **`notification_messages.proto`**| `droidlink.protocol.NotificationMessage` | Push alerts, notification dismissal, action callbacks, and app icons |
+| **`continuity_messages.proto`** | `droidlink.protocol.ContinuityMessage` | Live hardware vitals: battery percentage/charging state, Wi-Fi SSID/RSSI, cellular carrier & dual-SIM diagnostics |
+| **`screen_messages.proto`** | `droidlink.protocol.ScreenMessage` | Legacy screen mirroring and remote control protocols |
+| **`media_messages.proto`** | `droidlink.protocol.MediaMessage` | Virtual webcam and microphone streaming schemas (Phase 2) |
+| **`system_messages.proto`** | `droidlink.protocol.SystemMessage` | Handshake, pairing confirmation, heartbeat probes, and error reports |
+
+---
+
+## 📦 Message Framing
+
+Every Protocol Buffer message is transmitted across TCP or USB with a 4-byte header:
 
 ```
 ┌────────────────────────────────────┐
 │  Header (4 bytes)                  │
-│  ├─ Length (3 bytes, big-endian)  │
-│  └─ Type (1 byte)                 │
-│      ├─ 0x01: DATA                │
-│      ├─ 0x02: HEARTBEAT           │
-│      └─ 0x03: ERROR               │
+│  ├─ Length (3 bytes, big-endian)   │
+│  └─ Type (1 byte)                  │
+│      ├─ 0x01: DATA                 │
+│      ├─ 0x02: HEARTBEAT            │
+│      └─ 0x03: ERROR                │
 ├────────────────────────────────────┤
-│  Protobuf Message (variable)      │
+│  Protobuf Message (variable length)│
 └────────────────────────────────────┘
 ```
 
-## Generating Code
+---
+
+## ⚙️ Generating Code
 
 ### Android (Kotlin)
-
 ```bash
-cd android
-protoc --kotlin_out=app/src/main/kotlin/droidlink/protocol \
-  --proto_path=../protocol/protos \
-  ../protocol/protos/*.proto
+protoc --kotlin_out=android/core/network/src/main/java \
+  --proto_path=protocol/protos \
+  protocol/protos/*.proto
 ```
 
-### Mac (Swift)
-
+### macOS (Swift)
 ```bash
-cd mac
-protoc --swift_out=DroidLinkKit/Generated \
-  --proto_path=../protocol/protos \
-  ../protocol/protos/*.proto
+protoc --swift_out=mac/Sources/DroidLinkKit/Generated \
+  --proto_path=protocol/protos \
+  protocol/protos/*.proto
 ```
 
-## Versioning
+---
 
-Protocol version follows semantic versioning (`MAJOR.MINOR.PATCH`):
-- **MAJOR**: Breaking changes (both devices must update)
-- **MINOR**: New features (backward compatible)
-- **PATCH**: Bug fixes (backward compatible)
+## 🔒 Versioning & Compatibility Rules
 
-## Compatibility
-
-Protocol Buffers ensures:
-- ✅ Old clients can read new messages (unknown fields ignored)
-- ✅ New clients can read old messages (default values for new fields)
-- ❌ Removing fields breaks old clients
-- ❌ Changing field numbers breaks all clients
-
-## Documentation
-
-See [PROTOCOL.md](../docs/PROTOCOL.md) for detailed protocol specification.
+1. **Additive Changes**: New fields must use optional semantics (standard in proto3) and distinct tag numbers.
+2. **Never Re-number Fields**: Existing field numbers must remain constant to preserve wire compatibility.
+3. **Graceful Fallbacks**: Older client builds automatically ignore unrecognized fields without failing.

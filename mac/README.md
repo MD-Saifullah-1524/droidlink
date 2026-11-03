@@ -1,141 +1,69 @@
-# DroidLink Mac App
+# DroidLink macOS Application & Extensions
 
-SwiftUI-based macOS application for DroidLink.
+Native macOS application, Finder File Provider extension, and Share extension for DroidLink.
 
-## Project Structure
+---
 
-```
-mac/
-├── DroidLinkApp.swift          # Main app entry point
-├── ContentView.swift           # Main UI view
-├── DroidLinkKit/              # Swift Package (shared framework)
-│   ├── Package.swift          # Package definition
-│   └── Sources/
-│       └── DroidLinkClient.swift # Protocol client
-└── README.md                   # This file
-```
+## 🎯 Architecture Overview
 
-## Setup Instructions
+The macOS side of DroidLink consists of four tightly-coupled targets:
 
-### Option 1: Use Xcode (Recommended)
+1. **DroidLink (`DroidLink.app`)**:
+   - Built with **SwiftUI** and native `NavigationSplitView`.
+   - Sidebar navigation: `Home` (telemetry dashboard & transport status), `External Display` (monitor resolution, scaling, and controls), `Notifications` (alert history and filters), `Clipboard` (sync history and incognito mode), `Roadmap`, and `Settings`.
+   
+2. **DroidLinkKit (`DroidLinkKit.framework` / Swift Package)**:
+   - Shared library powering transports, encryption, and protocol framing.
+   - **`AoaUsbManager`**: Low-level IOKit USB communication communicating directly over Android Open Accessory (AOA 2.0).
+   - **`BleServer`**: CoreBluetooth GATT peripheral broadcasting control plane services.
+   - **`TcpServer`**: Network framework TCP listener with 4-byte framing.
+   - **`VirtualDisplayBridge` & `H264EncoderEngine`**: macOS virtual monitor engine powered by CoreGraphics and VideoToolbox.
+   - **`MacLuminanceMonitor`**: Real-time Mac ambient sensor monitoring and target nits calculation.
+   - **`CryptoChannel`**: AES-256-GCM message encryption.
 
-1. **Open Xcode**
-   ```bash
-   open -a Xcode .
-   ```
+3. **DroidLinkFileProvider (`DroidLinkFileProvider.appex`)**:
+   - Native `NSFileProviderReplicatedExtension` running out-of-process.
+   - Mounts `/storage/emulated/0` directly into Finder's sidebar.
+   - Communicates with the main app via local XPC and shared App Groups.
 
-2. **Create new project**
-   - File → New → Project
-   - Choose "macOS App" (SwiftUI)
-   - Product Name: "DroidLink"
-   - Bundle Identifier: "com.droidlink.mac"
-   - Save in: `mac/` directory
+4. **DroidLinkShare (`DroidLinkShare.appex`)**:
+   - macOS system Share Sheet extension allowing instant file transmission to Android from Finder, Safari, Photos, and other apps.
 
-3. **Add DroidLinkKit dependency**
-   - File → Add Package Dependencies
-   - Enter: `file://../DroidLinkKit`
-   - Or use Swift Package Manager settings
+---
 
-4. **Replace contents**
-   - Copy `DroidLinkApp.swift` to your project
-   - Copy `ContentView.swift` to your project
+## 🛠️ Building & Packaging
 
-5. **Add required capabilities** (in Signing & Capabilities)
-   - App Sandbox (for file access)
-   - Network (for device communication)
-   - Camera (for virtual webcam - Phase 3)
-   - Microphone (for virtual mic - Phase 3)
-
-### Option 2: Use Swift Package Manager
+### Automated Release Packaging (`build_pkg.sh`)
+The recommended way to build and package DroidLink is using `build_pkg.sh`:
 
 ```bash
-cd mac/DroidLinkKit
-swift build
-
-# Run tests
-swift test
-
-# Generate Xcode project
-swift package generate-xcodeproj
-open DroidLinkKit.xcodeproj
-```
-
-## Building
-
-```bash
-# Build from command line
 cd mac
-xcodebuild -scheme DroidLink build
-
-# Or using Xcode
-# Product → Build (⌘ + B)
+./build_pkg.sh
 ```
 
-## Running
+This automated script:
+1. Increments the bundle version with `xcrun agvtool next-version -all`.
+2. Compiles `DroidLink`, `DroidLinkFileProvider`, and `DroidLinkShare` in `Release` mode using `xcodebuild`.
+3. Bundles icons, assets, and localization resources.
+4. Code-signs all binaries, frameworks, and app extensions with hardened runtime and respective entitlements.
+5. Builds the signed macOS distribution package `DroidLink.pkg`.
 
-```bash
-# From Xcode
-# Product → Run (⌘ + R)
+---
 
-# From command line
-xcodebuild -scheme DroidLink -destination 'platform=macOS' run
-```
+### Building in Xcode
+1. Open `DroidLink.xcodeproj` in Xcode 15 or later:
+   ```bash
+   open DroidLink.xcodeproj
+   ```
+2. Select the `DroidLink` scheme.
+3. Build and run (⌘ + R).
 
-## Development Notes
+---
 
-### Required Permissions
+## 🔐 Required System Permissions
 
-Add to `Info.plist`:
-```xml
-<key>NSCameraUsageDescription</key>
-<string>DroidLink needs camera access for virtual webcam feature</string>
-<key>NSMicrophoneUsageDescription</key>
-<string>DroidLink needs microphone access for virtual microphone feature</string>
-```
-
-### Code Signing
-
-For development:
-```bash
-xcodebuild -scheme DroidLink \
-  CODE_SIGN_IDENTITY="-" \
-  CODE_SIGNING_REQUIRED=NO
-```
-
-For release (requires Apple Developer account):
-```bash
-xcodebuild -scheme DroidLink \
-  CODE_SIGN_IDENTITY="Developer ID Application: Your Name" \
-  CODE_SIGNING_REQUIRED=YES
-```
-
-## Architecture
-
-The Mac app consists of:
-
-1. **Main App** (SwiftUI)
-   - Main window with pairing UI
-   - Menu bar integration
-   - Settings screens
-
-2. **DroidLinkKit** (Swift Package)
-   - Protocol client
-   - Network layer
-   - Virtual devices (CMIO DAL)
-   - Discovery (Bonjour)
-
-## Next Steps
-
-1. ✅ Project structure created
-2. ⏳ Implement QR code generation
-3. ⏳ Implement Bonjour discovery
-4. ⏳ Implement TLS connection
-5. ⏳ Implement clipboard sync
-6. ⏳ Add menu bar integration
-
-## Resources
-
-- [Apple Developer Documentation](https://developer.apple.com/documentation/)
-- [SwiftUI Documentation](https://developer.apple.com/documentation/swiftui)
-- [Core Media IO (CMIO)](https://developer.apple.com/documentation/coremediaio)
-- [Bonjour (mDNS)](https://developer.apple.com/bonjour/)
+For full functionality, DroidLink requests the following macOS permissions:
+- **Screen Recording** (`CGPreflightScreenCaptureAccess`): Required to capture the virtual display stream for External Display.
+- **Accessibility** (`AXIsProcessTrusted`): Required to inject touch and mouse events into the virtual display canvas.
+- **Local Network**: Required for Wi-Fi discovery and TCP socket communication.
+- **Bluetooth**: Required for the BLE GATT control plane.

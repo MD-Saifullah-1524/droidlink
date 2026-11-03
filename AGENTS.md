@@ -4,181 +4,101 @@
 
 ## Project Vision
 
-Build a free, privacy-focused alternative to LinkMyMac that enables seamless Android-Apple ecosystem integration through direct local connections. No cloud, no accounts, no tracking — just device-to-device communication over USB and Wi-Fi.
+Build a free, privacy-focused alternative to LinkMyMac that enables seamless Android-Apple ecosystem integration through direct local connections. No cloud, no accounts, no tracking — just device-to-device communication over USB (AOA 2.0), local Wi-Fi, and Bluetooth Low Energy (BLE).
 
-## Tech Stack (Proposed)
+## Tech Stack
 
 ### Android App
 - **Language**: Kotlin 2.0+ with Coroutines & Flow
-- **UI**: Jetpack Compose
-- **Architecture**: Clean Architecture (Feature/Core modularization)
-- **Networking**: Ktor for client-server communication
-- **Permissions**: Permission handling for notifications, files, camera, mic
-- **Background Services**: Foreground services for persistent connections
-- **USB**: AOA (Android Open Accessory) protocol support
-- **Wi-Fi**: Wi-Fi Direct + Local network discovery
+- **UI**: Jetpack Compose with Material 3
+- **Architecture**: Modular Clean Architecture (`:app`, `:core:network`, `:core:security`, `:core:clipboard`)
+- **Networking & Transport**: Custom AOA 2.0 USB transport, TCP client with length-prefixed binary framing, BLE scanner/client
+- **Hardware Acceleration**: `MediaCodec` low-latency H.264 decoder for external display
+- **Permissions**: Notification listener, storage/media access, camera (CameraX for QR pairing)
+- **Background Services**: Persistent foreground service (`DroidLinkService`), Quick Settings Tile (`DroidLinkTileService`), Accessibility Service (`DroidLinkAccessibilityService`)
 
-### Mac/iPad App
+### Mac App
 - **Language**: Swift 6
-- **UI**: SwiftUI (iOS 17+, macOS 14+)
-- **Architecture**: MVVM with Combine
-- **Networking**: Native Network framework + Bonjour/mDNS for discovery
-- **IPC**: XPC for menu bar ↔ main app communication
-- **Virtual Devices**: AVFoundation for virtual webcam/mic
+- **UI**: SwiftUI (macOS 14+ Sonoma & macOS 15+ Sequoia) with `NavigationSplitView`
+- **Architecture**: MVVM with Combine and Swift Concurrency
+- **Shared Framework**: `DroidLinkKit` (Transports, Cryptography, Virtual Display, Protobuf schemas)
+- **Extensions**:
+  - `DroidLinkFileProvider`: Native `NSFileProviderReplicatedExtension` mounting Android storage in Finder
+  - `DroidLinkShare`: Native macOS Share extension for 1-click file delivery
+- **Hardware Acceleration**: VideoToolbox real-time H.264 baseline encoder with zero frame delay count
+- **Virtual Monitor**: CoreGraphics / DisplayServices / ScreenCaptureKit virtual display bridge
+- **Security**: Keychain Services, AES-256-GCM symmetric encryption
 
 ### Communication Protocol
-- **Transport**: TCP over USB (AOA) and Wi-Fi
-- **Serialization**: Protocol Buffers for efficient binary protocol
-- **Discovery**: mDNS/Bonjour for local network
-- **Security**: TLS 1.3 with certificate pinning for initial handshake
+- **Transport**: Direct USB (AOA 2.0), local Wi-Fi TCP, and Bluetooth Low Energy (BLE GATT)
+- **Serialization**: Protocol Buffers v3 (`.proto` schemas as single source of truth)
+- **Framing**: 4-byte header (3-byte length + 1-byte message type)
+- **Security**: AES-256-GCM symmetric encryption with keys exchanged during pairing
 
-### Optional: Web Dashboard (H5/LinkMyDrop alternative)
-- **Framework**: Next.js 15 + React 19
-- **Styling**: Tailwind CSS
-- **Real-time**: WebRTC for direct browser-to-device connection
-- **PWA**: Service workers for offline capability
-
-## Project Structure (Planned)
+## Project Structure
 
 ```
 droidlink/
-├── android/                    # Android app (Kotlin + Compose)
-│   ├── app/                    # Main application module
-│   ├── core/                   # Core shared utilities
-│   │   ├── network/           # Protocol buffers + Ktor client
-│   │   ├── permissions/       # Permission handling
-│   │   └── security/          # Certificate management
-│   ├── feature-clipboard/     # Clipboard sync
-│   ├── feature-notifications/ # Notification mirroring
-│   ├── feature-files/         # File transfer
-│   ├── feature-screen/        # Screen mirroring
-│   ├── feature-media/         # Virtual webcam/mic
-│   └── feature-calls/         # Call handling
-├── mac/                        # macOS app (Swift + SwiftUI)
-│   ├── DroidLink/             # Main app
-│   ├── DroidLinkMenu/         # Menu bar extension
-│   ├── DroidLinkKit/          # Shared framework
-│   │   ├── Networking/        # Protocol buffers + server
-│   │   ├── VirtualDevices/    # Webcam/mic components
-│   │   └── Discovery/         # Bonjour services
-│   └── DroidLinkTests/        # Test suite
-├── protocol/                   # Shared protocol definitions
-│   └── protos/                # Protocol Buffer schemas
-└── docs/                      # Architecture & API docs
+├── android/                                # Android app (Kotlin + Jetpack Compose)
+│   ├── app/                               # Main application module
+│   │   └── src/main/java/com/droidlink/app/
+│   │       ├── display/                   # External display MediaCodec player & luminance
+│   │       ├── filesystem/                # AndroidFileSystemManager & directory watcher
+│   │       ├── telemetry/                 # Battery, Wi-Fi, and SIM telemetry collectors
+│   │       ├── service/                   # DroidLinkService, Notification & Tile services
+│   │       └── ui/                        # Compose UI screens, QR Scanner, app filters
+│   └── core/                              # Modular core libraries
+│       ├── network/                       # AOA USB transport, BLE scanner/client, TCP
+│       ├── security/                      # KeyStore, CryptoChannel, QR parser
+│       └── clipboard/                     # System clipboard monitoring
+├── mac/                                    # macOS app (Swift + SwiftUI)
+│   ├── DroidLink.xcodeproj                # Xcode project configuration
+│   ├── build_pkg.sh                       # Packaging script generating DroidLink.pkg
+│   └── Sources/
+│       ├── DroidLink/                     # Main SwiftUI app & view controllers
+│       ├── DroidLinkKit/                  # Core shared framework
+│       │   ├── AoaUsbManager.swift        # USB AOA 2.0 engine
+│       │   ├── VirtualDisplayBridge.swift # macOS virtual monitor lifecycle
+│       │   ├── H264EncoderEngine.swift    # VideoToolbox encoder
+│       │   ├── FileTransferManager.swift  # 64-bit chunked file streaming
+│       │   ├── FileProvider/              # NSFileProvider domain management
+│       │   ├── Bluetooth/                 # BLE server and chunking
+│       │   └── CryptoChannel.swift        # AES-256-GCM encryption
+│       ├── DroidLinkFileProvider/         # Native macOS Finder extension
+│       └── DroidLinkShare/                # macOS Share extension
+├── protocol/                               # Shared protocol definitions
+│   └── protos/                            # Protocol Buffer v3 schemas
+└── docs/                                  # Architecture, protocol, and setup guides
 ```
 
-## Conventions (Proposed)
-
-### Android
-- **Feature-driven modular architecture** with `:feature-xxx:api` and `:feature-xxx:impl` pattern
-- **Coroutines + Flow** for async streams (no RxJava)
-- **Jetpack Compose** for all UI (no XML layouts)
-- **Hilt** for dependency injection (feature modules contribute to core graph)
-- **Repository pattern** for data layer abstraction
-- **Foreground services** with persistent notifications for background operations
-
-### Mac
-- **SwiftUI** for all UI (no UIKit unless unavoidable)
-- **Combine** for reactive streams (no RxSwift)
-- **XPC** for menu bar ↔ main app communication
-- **AVFoundation** for virtual camera/mic
-- **Keychain** for secure certificate storage
-
-### Protocol
-- **Protocol Buffers v3** for all message serialization
-- **Schema-first** development — `.proto` files are single source of truth
-- **Semantic versioning** for protocol compatibility
-- **Backward compatibility** mandatory — Mac app must support older Android versions
-
-### Cross-platform
-- **Local-first** design — all features work without internet
-- **Privacy-first** — no analytics, no tracking, no cloud
-- **Open source** — Apache 2.0 licensed, community-driven
-- **Documentation** — Every feature has README with architecture diagram
-
-## Key Commands (TBD)
+## Key Commands
 
 ```bash
 # Android
-./gradlew :app:installDebug          # Install debug APK
-./gradlew connectedAndroidTest       # Run instrumentation tests
-./gradlew :protocol:generateProto    # Regenerate protobuf classes
+cd android
+./gradlew assembleDebug                    # Build debug APK
+./gradlew testDebugUnitTest                # Run Android unit tests
+adb install -r app/build/outputs/apk/debug/app-debug.apk # Install on device
 
 # Mac
-xcodebuild -scheme DroidLink build    # Build Mac app
-xcodebuild test -scheme DroidLink     # Run tests
-swift package update                  # Update Swift dependencies
+cd mac
+./build_pkg.sh                             # Compile Release build, sign, and build DroidLink.pkg
+xcodebuild -scheme DroidLink build         # Build Mac app via command line
+swift test --package-path Sources/DroidLinkKit # Run kit tests
 
-# Protocol
-protoc --swift_out=. protos/*.proto   # Generate Swift from proto
-protoc --kotlin_out=. protos/*.proto  # Generate Kotlin from proto
+# Protocol Buffers
+protoc --swift_out=mac/Sources/DroidLinkKit/Generated \
+  --proto_path=protocol/protos protocol/protos/*.proto # Generate Swift bindings
+protoc --kotlin_out=android/core/network/src/main/java \
+  --proto_path=protocol/protos protocol/protos/*.proto # Generate Kotlin bindings
 ```
 
-## MVP Feature Scope (Phase 1)
+## Status & Shipped Capabilities (v1.1)
 
-### Core Infrastructure
-1. **QR Pairing** — One-time secure pairing via QR code
-2. **USB Connection** — AOA-based wired connection
-3. **Wi-Fi Connection** — Local network TCP + mDNS discovery
-4. **Protocol Layer** — Protocol Buffers message framing
-5. **Reconnection Logic** — Auto-reconnect on connection loss
-
-### Essential Features
-6. **Universal Clipboard** — Bidirectional text/image/URL sync
-7. **Notification Mirror** — Android notifications → Mac native notifications
-8. **File Transfer** — Drag-and-drop files between devices
-9. **Screen Mirroring** — Real-time Android screen → Mac window (H.264)
-10. **SMS/MMS Reading** — View message threads on Mac
-
-### Stretch Goals (Phase 2)
-11. **Virtual Webcam** — Android camera → Mac webcam input
-12. **Virtual Microphone** — Android mic → Mac audio input
-13. **Call Handling** — Incoming calls on Mac, answer/decline remotely
-14. **LinkMyDrop Alternative** — iPhone ↔ Android direct transfers (Web app)
-
-## Out of Scope (Explicitly Not Building)
-
-- Cloud sync or cloud relay of any kind
-- User accounts or authentication
-- Analytics or telemetry
-- Windows support (Mac/iPad only for MVP)
-- iOS companion app (deferred to Phase 2)
-- Remote access over internet (local network only)
-- Messaging app integrations beyond notification actions
-
-## Technical Challenges to Solve
-
-1. **AOA Protocol** — Implementing Android Open Accessory for USB connection
-2. **Video Streaming** — Efficient screen mirroring (H.264 encoding/decoding)
-3. **Virtual Devices** — macOS virtual webcam/mic implementation (CMIO DAL)
-4. **Notification Permissions** — Android Notification Listener Service reliability
-5. **Discovery** — Reliable mDNS/Bonjour discovery across OS versions
-6. **Protocol Compatibility** — Forward/backward compatibility as apps evolve
-7. **Battery Optimization** — Minimize Android battery drain
-
-## License & Distribution
-
-- **License**: Apache 2.0
-- **Distribution**:
-  - Android: Google Play Store + F-Droid + APK direct download
-  - Mac: App Store (if guidelines allow) + direct DMG download
-- **Revenue Model**: Free and open source (optional donations via GitHub Sponsors)
-
-## Notes
-
-**Current Status**: Planning phase — architecture and protocol design
-
-**Why This Matters**: LinkMyMac is $20-40/year for similar features. DroidLink democratizes Android-Apple integration, proves local-first privacy works, and provides a learning platform for systems programming (USB, video streaming, virtual devices).
-
-**First Steps**:
-1. Design protocol buffer schema for all message types
-2. Implement QR pairing flow (Android + Mac)
-3. Build basic USB connection (AOA handshake + data transfer)
-4. Implement clipboard sync as proof-of-concept
-5. Layer on additional features incrementally
-
-**Architecture Inspiration**:
-- KDE Connect (open source, but Linux-focused)
-- scrcpy (screen mirroring reference)
-- AirDrop (local discovery UX reference)
-- LinkMyMac (feature parity target)
+1. **Multi-Transport Separation**: Direct AOA 2.0 USB + BLE GATT control plane + High-speed Wi-Fi TCP.
+2. **External Display for Mac**: Hardware-accelerated VideoToolbox H.264 encoding + MediaCodec decoding, reverse touch/mouse injection, dynamic luminance calibration.
+3. **Android Storage in Finder**: Native macOS `NSFileProvider` mounting `/storage/emulated/0` with wire-speed USB streaming.
+4. **Universal Clipboard**: Instant two-way sync, Incognito Mode, Quick Settings tile, and Accessibility Service.
+5. **Notification Mirroring**: Push alerts to macOS Notification Center with app icons and action triggers.
+6. **Device Telemetry**: Real-time battery, Wi-Fi SSID/RSSI, cellular carrier & dual-SIM diagnostics.
+7. **System Share Extensions**: 1-click sharing between Mac Finder and Android Share Sheet.

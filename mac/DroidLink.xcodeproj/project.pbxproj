@@ -76,6 +76,15 @@
 		A100007D /* AoaUsbManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200007D /* AoaUsbManager.swift */; };
 		A100007E /* FileTransferManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200007E /* FileTransferManager.swift */; };
 		A100009A /* MacLuminanceMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200009A /* MacLuminanceMonitor.swift */; };
+		A10000A1 /* AoaAccessoryProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000A1 /* AoaAccessoryProfile.swift */; };
+		A10000A2 /* DroidOsProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000A2 /* DroidOsProtocol.swift */; };
+		A10000A3 /* DroidOsFramer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000A3 /* DroidOsFramer.swift */; };
+		A10000A4 /* MacToAndroidKeyMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000A4 /* MacToAndroidKeyMap.swift */; };
+		A10000A5 /* ReverseTetherBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000A5 /* ReverseTetherBridge.swift */; };
+		A10000A6 /* DroidOsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000A6 /* DroidOsManager.swift */; };
+		A10000A7 /* DroidOsDisplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000A7 /* DroidOsDisplayView.swift */; };
+		A10000A8 /* DroidOsDisplayWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000A8 /* DroidOsDisplayWindowController.swift */; };
+		A10000A9 /* DroidOsDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000A9 /* DroidOsDetailView.swift */; };
 		A1000080 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000080 /* ShareViewController.swift */; };
 		A1000081 /* MessageFramer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000007 /* MessageFramer.swift */; };
 		A1000082 /* FileProviderIPC.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000012 /* FileProviderIPC.swift */; };
@@ -176,6 +185,15 @@
 		A200007D /* AoaUsbManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AoaUsbManager.swift; sourceTree = "<group>"; };
 		A200007E /* FileTransferManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileTransferManager.swift; sourceTree = "<group>"; };
 		A200009A /* MacLuminanceMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacLuminanceMonitor.swift; sourceTree = "<group>"; };
+		A20000A1 /* AoaAccessoryProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AoaAccessoryProfile.swift; sourceTree = "<group>"; };
+		A20000A2 /* DroidOsProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DroidOsProtocol.swift; sourceTree = "<group>"; };
+		A20000A3 /* DroidOsFramer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DroidOsFramer.swift; sourceTree = "<group>"; };
+		A20000A4 /* MacToAndroidKeyMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacToAndroidKeyMap.swift; sourceTree = "<group>"; };
+		A20000A5 /* ReverseTetherBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReverseTetherBridge.swift; sourceTree = "<group>"; };
+		A20000A6 /* DroidOsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DroidOsManager.swift; sourceTree = "<group>"; };
+		A20000A7 /* DroidOsDisplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DroidOsDisplayView.swift; sourceTree = "<group>"; };
+		A20000A8 /* DroidOsDisplayWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DroidOsDisplayWindowController.swift; sourceTree = "<group>"; };
+		A20000A9 /* DroidOsDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DroidOsDetailView.swift; sourceTree = "<group>"; };
 		A2000080 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		A2000081 /* DroidLinkShare.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DroidLinkShare.entitlements; sourceTree = "<group>"; };
 		A2000082 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -245,6 +263,10 @@
 				A200002A /* SettingsView.swift */,
 				A200002B /* UIComponents.swift */,
 				A2000077 /* ExternalDisplayDetailView.swift */,
+				A20000A6 /* DroidOsManager.swift */,
+				A20000A7 /* DroidOsDisplayView.swift */,
+				A20000A8 /* DroidOsDisplayWindowController.swift */,
+				A20000A9 /* DroidOsDetailView.swift */,
 
 				A200002C /* DroidLink.entitlements */,
 				A200002D /* Info.plist */,
@@ -278,6 +300,11 @@
 				A200007D /* AoaUsbManager.swift */,
 				A200007E /* FileTransferManager.swift */,
 				A200009A /* MacLuminanceMonitor.swift */,
+				A20000A1 /* AoaAccessoryProfile.swift */,
+				A20000A2 /* DroidOsProtocol.swift */,
+				A20000A3 /* DroidOsFramer.swift */,
+				A20000A4 /* MacToAndroidKeyMap.swift */,
+				A20000A5 /* ReverseTetherBridge.swift */,
 
 			);
 			name = DroidLinkKit;
@@ -521,6 +548,15 @@
 				A100007D /* AoaUsbManager.swift in Sources */,
 				A100007E /* FileTransferManager.swift in Sources */,
 				A100009A /* MacLuminanceMonitor.swift in Sources */,
+				A10000A1 /* AoaAccessoryProfile.swift in Sources */,
+				A10000A2 /* DroidOsProtocol.swift in Sources */,
+				A10000A3 /* DroidOsFramer.swift in Sources */,
+				A10000A4 /* MacToAndroidKeyMap.swift in Sources */,
+				A10000A5 /* ReverseTetherBridge.swift in Sources */,
+				A10000A6 /* DroidOsManager.swift in Sources */,
+				A10000A7 /* DroidOsDisplayView.swift in Sources */,
+				A10000A8 /* DroidOsDisplayWindowController.swift in Sources */,
+				A10000A9 /* DroidOsDetailView.swift in Sources */,
 
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -580,7 +616,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ENABLE_MODULES = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 126;
+				CURRENT_PROJECT_VERSION = 135;
 				MARKETING_VERSION = 1.1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -605,7 +641,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ENABLE_MODULES = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 126;
+				CURRENT_PROJECT_VERSION = 135;
 				MARKETING_VERSION = 1.1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
@@ -624,7 +660,7 @@
 				CODE_SIGN_ENTITLEMENTS = Sources/DroidLink/DroidLink.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 126;
+				CURRENT_PROJECT_VERSION = 135;
 				MARKETING_VERSION = 1.1;
 				DEVELOPMENT_TEAM = CFV38KGZ97;
 				ENABLE_HARDENED_RUNTIME = NO;
@@ -648,7 +684,7 @@
 				CODE_SIGN_ENTITLEMENTS = Sources/DroidLink/DroidLink.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 126;
+				CURRENT_PROJECT_VERSION = 135;
 				MARKETING_VERSION = 1.1;
 				DEVELOPMENT_TEAM = CFV38KGZ97;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -671,7 +707,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = Sources/DroidLinkFileProvider/DroidLinkFileProvider.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 126;
+				CURRENT_PROJECT_VERSION = 135;
 				MARKETING_VERSION = 1.1;
 				DEVELOPMENT_TEAM = CFV38KGZ97;
 				ENABLE_HARDENED_RUNTIME = NO;
@@ -696,7 +732,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = Sources/DroidLinkFileProvider/DroidLinkFileProvider.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 126;
+				CURRENT_PROJECT_VERSION = 135;
 				MARKETING_VERSION = 1.1;
 				DEVELOPMENT_TEAM = CFV38KGZ97;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -721,7 +757,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = Sources/DroidLinkShare/DroidLinkShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 126;
+				CURRENT_PROJECT_VERSION = 135;
 				MARKETING_VERSION = 1.1;
 				DEVELOPMENT_TEAM = CFV38KGZ97;
 				ENABLE_HARDENED_RUNTIME = NO;
@@ -746,7 +782,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = Sources/DroidLinkShare/DroidLinkShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 126;
+				CURRENT_PROJECT_VERSION = 135;
 				MARKETING_VERSION = 1.1;
 				DEVELOPMENT_TEAM = CFV38KGZ97;
 				ENABLE_HARDENED_RUNTIME = YES;

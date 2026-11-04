@@ -73,12 +73,17 @@ rm -rf DroidLink.app DroidLinkCall.app DroidLinkMessages.app
 cp -R "$BUILT_APP" DroidLink.app
 
 echo "🚀 5. Updating /Applications/DroidLink.app..."
+if [ -d "/Applications/DroidLink.app" ] && [ ! -w "/Applications/DroidLink.app" ]; then
+    echo "⚠️  /Applications/DroidLink.app is owned by root. Attempting privileged update..."
+    osascript -e 'do shell script "rm -rf /Applications/DroidLink.app && cp -R \"'"$BUILT_APP"'\" /Applications/DroidLink.app" with administrator privileges' 2>/dev/null || true
+fi
 rm -rf /Applications/DroidLink.app 2>/dev/null || true
 cp -R "$BUILT_APP" /Applications/DroidLink.app 2>/dev/null || true
-if [ -d "$HOME/Applications" ]; then
-    rm -rf "$HOME/Applications/DroidLink.app" 2>/dev/null || true
-    cp -R "$BUILT_APP" "$HOME/Applications/DroidLink.app" 2>/dev/null || true
-fi
+
+# Ensure user-local copy in ~/Applications is always up-to-date
+mkdir -p "$HOME/Applications"
+rm -rf "$HOME/Applications/DroidLink.app" 2>/dev/null || true
+cp -R "$BUILT_APP" "$HOME/Applications/DroidLink.app"
 
 echo ""
 echo "=========================================================="

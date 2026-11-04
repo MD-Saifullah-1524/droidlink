@@ -20,7 +20,7 @@ final class H264EncoderEngine: @unchecked Sendable {
     }
 
     /// Initializes and starts the hardware H.264 compression session
-    func start(width: Int32, height: Int32, fps: Int32 = 60, bitrateKbps: Int32 = 10000) -> Bool {
+    func start(width: Int32, height: Int32, fps: Int32 = 60, bitrateKbps: Int32 = 16000) -> Bool {
         stop()
 
         var session: VTCompressionSession?
@@ -52,7 +52,7 @@ final class H264EncoderEngine: @unchecked Sendable {
         VTSessionSetProperty(session, key: kVTCompressionPropertyKey_MaxKeyFrameInterval, value: NSNumber(value: fps * 2))
         VTSessionSetProperty(session, key: kVTCompressionPropertyKey_ExpectedFrameRate, value: NSNumber(value: fps))
         VTSessionSetProperty(session, key: kVTCompressionPropertyKey_MaxFrameDelayCount, value: NSNumber(value: 0))
-        VTSessionSetProperty(session, key: kVTCompressionPropertyKey_PrioritizeEncodingSpeedOverQuality, value: kCFBooleanTrue)
+        VTSessionSetProperty(session, key: kVTCompressionPropertyKey_PrioritizeEncodingSpeedOverQuality, value: kCFBooleanFalse)
 
         let avgBitrate = NSNumber(value: bitrateKbps * 1000)
         VTSessionSetProperty(session, key: kVTCompressionPropertyKey_AverageBitRate, value: avgBitrate)

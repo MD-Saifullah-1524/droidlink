@@ -29,6 +29,37 @@ struct SettingsDetailView: View {
                     NativeCard {
                         VStack(spacing: 0) {
                             Button {
+                                onNavigate?(.droidOs)
+                            } label: {
+                                HStack(spacing: 12) {
+                                    SquircleIcon(
+                                        icon: "desktopcomputer",
+                                        gradient: LinearGradient(colors: [.orange, .red], startPoint: .topLeading, endPoint: .bottomTrailing),
+                                        size: 34,
+                                        iconSize: 17
+                                    )
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("droidOS Workstation")
+                                            .font(.system(size: 13, weight: .semibold))
+                                            .foregroundStyle(Color.primary)
+                                        Text("Qualcomm Snapdragon desktop streaming, mouse/keyboard input, and reverse tethering")
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                    Image(systemName: "chevron.forward")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundStyle(.tertiary)
+                                }
+                                .padding(.vertical, 8)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+
+                            Divider()
+                                .padding(.vertical, 4)
+
+                            Button {
                                 onNavigate?(.notifications)
                             } label: {
                                 HStack(spacing: 12) {
@@ -277,6 +308,34 @@ struct SettingsDetailView: View {
                                     Text("Disconnected")
                                         .font(.system(size: 13))
                                         .foregroundStyle(.secondary)
+                                }
+                            }
+
+                            Divider()
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("USB Accessory Handshake Profile")
+                                            .font(.subheadline)
+                                        Text("Controls metadata strings sent during direct USB connection negotiation")
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                    Picker("", selection: Binding(
+                                        get: { AoaAccessoryProfile.current },
+                                        set: { newProfile in
+                                            AoaAccessoryProfile.current = newProfile
+                                            AoaUsbManager.shared.activeProfile = newProfile
+                                        }
+                                    )) {
+                                        ForEach(AoaAccessoryProfile.allCases) { profile in
+                                            Text(profile.rawValue).tag(profile)
+                                        }
+                                    }
+                                    .pickerStyle(.menu)
+                                    .frame(maxWidth: 220)
                                 }
                             }
                         }

@@ -13,7 +13,6 @@ struct ExternalDisplayDetailView: View {
     @State private var selectedScale: Double = 2.0 // Default 200% scaling
     @State private var enableHiDpi: Bool = true
     @State private var enableTouch: Bool = true
-    @State private var performanceMode: Int = 0 // 0: Ultra-Low Latency, 1: Balanced, 2: High Quality
 
     @State private var hasScreenRecordingPermission: Bool = CGPreflightScreenCaptureAccess()
     @State private var hasAccessibilityPermission: Bool = AXIsProcessTrusted()
@@ -444,24 +443,31 @@ struct ExternalDisplayDetailView: View {
                     }
                 }
 
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text("Performance & Latency Mode")
+                HStack(spacing: 12) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 16))
+                        .foregroundStyle(.yellow)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Maximum Quality USB Pipeline")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Text(performanceMode == 0 ? "⚡ Minimum Lag (~15-25ms)" : (performanceMode == 1 ? "⚖️ Balanced (~30-40ms)" : "🎨 Max Sharpness"))
+                            .fontWeight(.medium)
+                        Text("Direct USB connection delivers zero-latency hardware streaming locked to highest visual quality.")
                             .font(.caption2)
-                            .foregroundStyle(performanceMode == 0 ? .green : .secondary)
+                            .foregroundStyle(.secondary)
                     }
-
-                    Picker("Mode", selection: $performanceMode) {
-                        Text("⚡ Ultra-Low Latency").tag(0)
-                        Text("⚖️ Balanced").tag(1)
-                        Text("🎨 High Quality").tag(2)
-                    }
-                    .pickerStyle(.segmented)
+                    Spacer()
+                    Text("🎨 Maximum Sharpness")
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.green)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color.green.opacity(0.12))
+                        .clipShape(Capsule())
                 }
+                .padding(10)
+                .background(Color.primary.opacity(0.04))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
 
                 Divider()
 
@@ -482,12 +488,8 @@ struct ExternalDisplayDetailView: View {
                         let res = resolutions[idx]
                         displayManager.isTouchInputEnabled = enableTouch
 
-                        let bitrate: Int32
-                        switch performanceMode {
-                        case 0: bitrate = selectedFps == 120 ? 9000 : 7000
-                        case 1: bitrate = selectedFps == 120 ? 14000 : 10000
-                        default: bitrate = selectedFps == 120 ? 18000 : 14000
-                        }
+                        // Direct USB cable connection provides full wire bandwidth; always use highest bitrate settings
+                        let bitrate: Int32 = selectedFps >= 120 ? 20000 : 16000
 
                         displayManager.startExternalDisplay(
                             width: res.width,

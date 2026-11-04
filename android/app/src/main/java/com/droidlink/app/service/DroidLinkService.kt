@@ -856,7 +856,7 @@ class DroidLinkService : Service() {
     private fun checkAndConnectAttachedUsbAccessory() {
         val usbManager = getSystemService(Context.USB_SERVICE) as? android.hardware.usb.UsbManager ?: return
         val accessoryList = usbManager.accessoryList
-        val accessory = accessoryList?.firstOrNull { it.manufacturer == "DroidLink" }
+        val accessory = accessoryList?.firstOrNull { it.manufacturer == "DroidLink" || it.manufacturer == "droidOS" }
         if (accessory != null) {
             Log.i(TAG, "🔌 Found attached DroidLink USB accessory on startup: ${accessory.model}")
             connectAoa(accessory)

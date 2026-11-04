@@ -111,7 +111,7 @@ class MainActivity : ComponentActivity() {
     private fun checkAttachedUsbAccessory() {
         try {
             val usbManager = getSystemService(Context.USB_SERVICE) as? android.hardware.usb.UsbManager ?: return
-            val accessory = usbManager.accessoryList?.firstOrNull { it.manufacturer == "DroidLink" }
+            val accessory = usbManager.accessoryList?.firstOrNull { it.manufacturer == "DroidLink" || it.manufacturer == "droidOS" }
             if (accessory != null) {
                 DroidLinkService.handleUsbAccessoryAttached(this, accessory)
             }

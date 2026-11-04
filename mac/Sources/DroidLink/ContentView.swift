@@ -18,6 +18,7 @@ struct MirroredNotificationItem: Identifiable, Equatable {
 
 enum SidebarSection: String, CaseIterable, Identifiable {
     case home = "Home"
+    case droidOs = "droidOS Workstation"
     case externalDisplay = "External Display"
     case notifications = "Notifications"
     case clipboard = "Universal Clipboard"
@@ -29,6 +30,7 @@ enum SidebarSection: String, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .home: return "macbook.and.iphone"
+        case .droidOs: return "desktopcomputer"
         case .externalDisplay: return "display.2"
         case .notifications: return "bell.badge"
         case .clipboard: return "doc.on.clipboard"
@@ -74,6 +76,21 @@ struct ContentView: View {
                     } icon: {
                         Image(systemName: SidebarSection.home.icon)
                             .foregroundStyle(.blue)
+                    }
+                }
+
+                NavigationLink(value: SidebarSection.droidOs) {
+                    Label {
+                        HStack {
+                            Text("droidOS Workstation")
+                            Spacer()
+                            if DroidOsManager.shared.isWorkstationActive {
+                                Circle().fill(Color.green).frame(width: 8, height: 8)
+                            }
+                        }
+                    } icon: {
+                        Image(systemName: SidebarSection.droidOs.icon)
+                            .foregroundStyle(.orange)
                     }
                 }
 
@@ -170,6 +187,8 @@ struct ContentView: View {
         switch selectedSection ?? .home {
         case .home:
             HomeDetailView(viewModel: viewModel, onNavigate: { selectedSection = $0 })
+        case .droidOs:
+            DroidOsDetailView(viewModel: viewModel)
         case .externalDisplay:
             ExternalDisplayDetailView(viewModel: viewModel)
         case .notifications:
@@ -516,7 +535,9 @@ final class ContentViewModel: ObservableObject {
         if force || MacTelemetryCollector.shared.hasStatusChanged(from: lastSentTelemetry, to: status) {
             lastSentTelemetry = status
             if AoaUsbManager.shared.isConnected {
-                AoaUsbManager.shared.sendTelemetry(status)
+                if !AoaUsbManager.shared.isDroidOsActive {
+                    AoaUsbManager.shared.sendTelemetry(status)
+                }
             } else if tcpServer.hasActiveClient {
                 tcpServer.sendTelemetry(status)
             } else {
@@ -657,7 +678,9 @@ final class ContentViewModel: ObservableObject {
                 guard let self = self else { return }
                 self.stopWakeupTimer()
                 self.startTelemetryTimer()
-                self.sendCurrentTelemetry(force: true)
+                if !AoaUsbManager.shared.isDroidOsActive {
+                    self.sendCurrentTelemetry(force: true)
+                }
                 let deviceModel = savedModel ?? self.remoteDeviceStatus?.deviceModel ?? "Android Device"
                 self.state = .connected(name: deviceName, model: deviceModel)
                 self.clipboardManager.startObserving()
@@ -770,7 +793,9 @@ final class ContentViewModel: ObservableObject {
                 guard let self = self else { return }
                 self.stopWakeupTimer()
                 self.startTelemetryTimer()
-                self.sendCurrentTelemetry(force: true)
+                if !AoaUsbManager.shared.isDroidOsActive {
+                    self.sendCurrentTelemetry(force: true)
+                }
                 self.state = .connected(name: deviceName, model: savedModel)
                 self.clipboardManager.startObserving()
                 print("⚡ Mac UI transitioned to Connected via Direct USB: \(deviceName)")

@@ -20,6 +20,7 @@ final class FileProviderDomainManager: ObservableObject {
     @Published private(set) var mountType: StorageMountType = .none
 
     let ipcServer = FileProviderIPCServer()
+    private var isRegisteringDomain = false
 
     private init() {
         Task {
@@ -84,6 +85,14 @@ final class FileProviderDomainManager: ObservableObject {
 
     /// Mounts the Android storage directly in macOS Finder sidebar as a native CloudStorage File Provider.
     func registerDomain(deviceId: String, deviceName: String, forceFresh: Bool = false) async throws {
+        guard !isRegisteringDomain else {
+            print("⏳ registerDomain already in progress; skipping duplicate call for '\(deviceName)'")
+            fflush(stdout)
+            return
+        }
+        isRegisteringDomain = true
+        defer { isRegisteringDomain = false }
+
         let displayName = "\(deviceName) (DroidLink)"
         let domainId = NSFileProviderDomainIdentifier("com.droidlink.provider.\(deviceId)")
 

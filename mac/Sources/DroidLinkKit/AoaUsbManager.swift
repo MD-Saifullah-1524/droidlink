@@ -26,16 +26,41 @@ public final class AoaUsbManager: ObservableObject, @unchecked Sendable {
 
     @Published public private(set) var isConnected: Bool = false
     @Published public private(set) var isAccessoryMode: Bool = false
+    @Published public private(set) var isDroidOsSession: Bool = false
     @Published public private(set) var connectedDeviceName: String = ""
+    @Published public var activeProfile: AoaAccessoryProfile = AoaAccessoryProfile.current
 
     public var onMessageReceived: ((Data) -> Void)?
+    public var onDroidOsPacketReceived: ((_ type: DroidOsProtocol.MessageType, _ flags: UInt8, _ payload: Data) -> Void)?
     public var onConnectionStatusChanged: ((Bool) -> Void)?
 
     private var notifyPort: IONotificationPortRef?
     private var matchedIterator: io_iterator_t = 0
     private var terminatedIterator: io_iterator_t = 0
     private let queue = DispatchQueue(label: "com.droidlink.aoa.usb", qos: .userInteractive)
+    private let writeQueue = DispatchQueue(label: "com.droidlink.aoa.write", qos: .userInitiated)
     private let sendLock = NSLock()
+    private let stateLock = NSLock()
+    private var _rawIsConnected: Bool = false
+    private var _rawIsAccessoryMode: Bool = false
+    private var _rawIsDroidOsSession: Bool = false
+    private var _rawConnectedDeviceName: String = ""
+    private var failedProbeCooldowns: [String: Date] = [:]
+    private var consecutiveWriteTimeouts: Int = 0
+
+    /// Thread-safe accessor for USB background queues
+    public var isSessionActive: Bool {
+        stateLock.lock()
+        defer { stateLock.unlock() }
+        return _rawIsConnected
+    }
+
+    /// Thread-safe check if currently in droidOS mode
+    public var isDroidOsActive: Bool {
+        stateLock.lock()
+        defer { stateLock.unlock() }
+        return _rawIsDroidOsSession || activeProfile == .droidOS
+    }
 
     // Active accessory interface
     private var activeDeviceInterface: UnsafeMutablePointer<UnsafeMutablePointer<IOUSBDeviceInterface>?>?
@@ -65,7 +90,7 @@ public final class AoaUsbManager: ObservableObject, @unchecked Sendable {
             self.scanTimer?.invalidate()
             self.scanTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
                 guard let self = self else { return }
-                if !self.isConnected {
+                if !self.isSessionActive {
                     self.queue.async {
                         self.scanConnectedDevices()
                     }
@@ -167,7 +192,7 @@ public final class AoaUsbManager: ObservableObject, @unchecked Sendable {
             IOObjectRelease(service)
             service = IOIteratorNext(iterator)
         }
-        if isConnected {
+        if isSessionActive {
             print("🔌 AoaUsbManager: USB device disconnected from bus")
             disconnect()
         }
@@ -175,7 +200,7 @@ public final class AoaUsbManager: ObservableObject, @unchecked Sendable {
 
     /// Scans all currently attached USB devices
     public func scanConnectedDevices() {
-        guard !isConnected else { return }
+        guard !isSessionActive else { return }
         for className in ["IOUSBDevice", "IOUSBHostDevice"] {
             var iterator: io_iterator_t = 0
             let matchingDict = IOServiceMatching(className)
@@ -186,7 +211,7 @@ public final class AoaUsbManager: ObservableObject, @unchecked Sendable {
             while service != 0 {
                 probeDevice(service: service)
                 IOObjectRelease(service)
-                if isConnected {
+                if isSessionActive {
                     IOObjectRelease(iterator)
                     return
                 }
@@ -199,11 +224,18 @@ public final class AoaUsbManager: ObservableObject, @unchecked Sendable {
     // MARK: - Device Probing & AOA Handshake
 
     private func probeDevice(service: io_service_t) {
-        guard !isConnected else { return }
+        guard !isSessionActive else { return }
 
         var entryName = [CChar](repeating: 0, count: 128)
         IORegistryEntryGetName(service, &entryName)
         let deviceName = String(cString: entryName)
+
+        stateLock.lock()
+        if let lastFail = failedProbeCooldowns[deviceName], Date().timeIntervalSince(lastFail) < 5.0 {
+            stateLock.unlock()
+            return
+        }
+        stateLock.unlock()
 
         var score: Int32 = 0
         var plugInPtr: UnsafeMutablePointer<UnsafeMutablePointer<IOCFPlugInInterface>?>? = nil
@@ -265,13 +297,13 @@ public final class AoaUsbManager: ObservableObject, @unchecked Sendable {
 
         if isAndroidVendor || !deviceName.isEmpty {
             print("📲 AoaUsbManager: Candidate Android device detected ('\(deviceName)', VID=0x\(String(vendorID, radix: 16))). Initiating AOA 2.0 handshake...")
-            triggerAoaHandshake(devicePtr: devicePtr)
+            triggerAoaHandshake(devicePtr: devicePtr, deviceName: deviceName)
         } else {
             _ = device.Release(devicePtr)
         }
     }
 
-    private func triggerAoaHandshake(devicePtr: UnsafeMutablePointer<UnsafeMutablePointer<IOUSBDeviceInterface>?>) {
+    private func triggerAoaHandshake(devicePtr: UnsafeMutablePointer<UnsafeMutablePointer<IOUSBDeviceInterface>?>, deviceName: String) {
         guard let device = devicePtr.pointee?.pointee else { return }
         defer { _ = device.Release(devicePtr) }
 
@@ -308,14 +340,16 @@ public final class AoaUsbManager: ObservableObject, @unchecked Sendable {
             return
         }
 
-        // Step 2: Request 52 (SEND_STRING)
+        // Step 2: Request 52 (SEND_STRING) - Dynamically resolve based on profile & device name
+        let resolved = activeProfile.resolve(forDeviceName: deviceName)
+        print("📲 AoaUsbManager: Sending AOA handshake strings: Manufacturer='\(resolved.manufacturer)', Model='\(resolved.model)', Desc='\(resolved.descriptionString)' (Profile: \(activeProfile.rawValue))")
         let accessoryStrings: [(UInt16, String)] = [
-            (0, "DroidLink"),
-            (1, "DroidLink Display"),
-            (2, "Mac Display Bridge"),
-            (3, "1.0"),
-            (4, "https://github.com/droidlink"),
-            (5, "0000000012345678")
+            (0, resolved.manufacturer),
+            (1, resolved.model),
+            (2, resolved.descriptionString),
+            (3, activeProfile.version),
+            (4, resolved.uri),
+            (5, activeProfile.serialNumber)
         ]
 
         for (index, str) in accessoryStrings {
@@ -444,19 +478,21 @@ public final class AoaUsbManager: ObservableObject, @unchecked Sendable {
             var inPipe: UInt8 = 0
             var outPipe: UInt8 = 0
 
-            for pipe in 1...numEndpoints {
-                var direction: UInt8 = 0
-                var number: UInt8 = 0
-                var transferType: UInt8 = 0
-                var maxPacketSize: UInt16 = 0
-                var interval: UInt8 = 0
+            if numEndpoints > 0 {
+                for pipe in 1...numEndpoints {
+                    var direction: UInt8 = 0
+                    var number: UInt8 = 0
+                    var transferType: UInt8 = 0
+                    var maxPacketSize: UInt16 = 0
+                    var interval: UInt8 = 0
 
-                _ = candidateIntf.GetPipeProperties(candidateIntfPtr, pipe, &direction, &number, &transferType, &maxPacketSize, &interval)
-                if transferType == 2 { // Bulk
-                    if direction == 1 { // In
-                        inPipe = pipe
-                    } else if direction == 0 { // Out
-                        outPipe = pipe
+                    _ = candidateIntf.GetPipeProperties(candidateIntfPtr, pipe, &direction, &number, &transferType, &maxPacketSize, &interval)
+                    if transferType == 2 { // Bulk
+                        if direction == 1 { // In
+                            inPipe = pipe
+                        } else if direction == 0 { // Out
+                            outPipe = pipe
+                        }
                     }
                 }
             }
@@ -486,15 +522,22 @@ public final class AoaUsbManager: ObservableObject, @unchecked Sendable {
         self.activeInterfaceInterface = intfPtr
         self.bulkInPipeRef = foundInPipe
         self.bulkOutPipeRef = foundOutPipe
-        self.isConnected = true
-        self.isAccessoryMode = true
-        self.connectedDeviceName = "Android Device (Direct USB)"
+
+        stateLock.lock()
+        _rawIsConnected = true
+        _rawIsAccessoryMode = true
+        _rawIsDroidOsSession = (activeProfile == .droidOS)
+        _rawConnectedDeviceName = (activeProfile == .droidOS) ? "droidOS Device (Direct USB)" : "Android Device (Direct USB)"
+        stateLock.unlock()
 
         print("⚡ AoaUsbManager: Successfully connected to Android AOA Accessory! (InPipe=\(foundInPipe), OutPipe=\(foundOutPipe))")
 
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            self.objectWillChange.send()
+            self.isConnected = true
+            self.isAccessoryMode = true
+            self.isDroidOsSession = (self.activeProfile == .droidOS)
+            self.connectedDeviceName = (self.activeProfile == .droidOS) ? "droidOS Device (Direct USB)" : "Android Device (Direct USB)"
             self.onConnectionStatusChanged?(true)
             NotificationCenter.default.post(name: .droidlinkUsbConnected, object: self.connectedDeviceName)
             NotificationCenter.default.post(name: .droidlinkDeviceConnected, object: self.connectedDeviceName)
@@ -511,19 +554,38 @@ public final class AoaUsbManager: ObservableObject, @unchecked Sendable {
             var buffer = [UInt8](repeating: 0, count: 16384)
             var streamBuffer = Data()
             let framer = MessageFramer()
+            let droidOsFramer = DroidOsFramer()
+            var isDroidOsMode = false
 
-            while let self = self, self.isConnected, let intf = self.activeInterfaceInterface?.pointee?.pointee {
+            while let self = self, self.isSessionActive, let intf = self.activeInterfaceInterface?.pointee?.pointee {
                 var readSize: UInt32 = UInt32(buffer.count)
                 let kr = intf.ReadPipe(self.activeInterfaceInterface, self.bulkInPipeRef, &buffer, &readSize)
 
                 if kr == KERN_SUCCESS && readSize > 0 {
+                    self.consecutiveWriteTimeouts = 0
                     let chunk = Data(buffer[0..<Int(readSize)])
-                    streamBuffer.append(chunk)
 
-                    do {
-                        let messages = try framer.deframe(from: &streamBuffer)
-                        for msgData in messages {
-                            self.onMessageReceived?(msgData)
+                    if isDroidOsMode || (chunk.count >= 2 && chunk[0] == DroidOsProtocol.magicByte0 && chunk[1] == DroidOsProtocol.magicByte1) {
+                        if !isDroidOsMode {
+                            isDroidOsMode = true
+                            self.stateLock.lock()
+                            self._rawIsDroidOsSession = true
+                            self.stateLock.unlock()
+                            DispatchQueue.main.async {
+                                self.isDroidOsSession = true
+                            }
+                        }
+                        let packets = droidOsFramer.deframe(chunk: chunk)
+                        for pkt in packets {
+                            self.onDroidOsPacketReceived?(pkt.type, pkt.flags, pkt.payload)
+                        }
+                    } else {
+                        streamBuffer.append(chunk)
+
+                        do {
+                            let messages = try framer.deframe(from: &streamBuffer)
+                            for msgData in messages {
+                                self.onMessageReceived?(msgData)
 
                             if let rootMsg = try? Droidlink_Protocol_DroidLinkMessage(serializedBytes: msgData) {
                                 switch rootMsg.payload {
@@ -600,6 +662,7 @@ public final class AoaUsbManager: ObservableObject, @unchecked Sendable {
                         print("⚠️ AoaUsbManager: Deframing error: \(error), clearing streamBuffer to resync")
                         streamBuffer.removeAll()
                     }
+                }
                 } else if kr != KERN_SUCCESS {
                     print("⚠️ AoaUsbManager: ReadPipe failed with kr=\(kr)")
                     break
@@ -613,7 +676,7 @@ public final class AoaUsbManager: ObservableObject, @unchecked Sendable {
 
     /// Sends an ExternalDisplayMessage wrapped in DroidLinkMessage and framed over USB Bulk OUT
     func send(externalDisplay message: Droidlink_Protocol_ExternalDisplayMessage) -> Bool {
-        guard isConnected else { return false }
+        guard isSessionActive else { return false }
         var rootMsg = Droidlink_Protocol_DroidLinkMessage()
         rootMsg.id = UInt64(Date().timeIntervalSince1970 * 1000)
         rootMsg.timestamp = UInt64(Date().timeIntervalSince1970 * 1000)
@@ -630,11 +693,24 @@ public final class AoaUsbManager: ObservableObject, @unchecked Sendable {
         }
     }
 
-    /// Sends raw bytes across the high-speed USB Bulk OUT endpoint
+    /// Sends a droidOS protocol frame with 8-byte framing header over USB Bulk OUT
+    @discardableResult
+    public func send(droidOsType: DroidOsProtocol.MessageType, flags: UInt8 = 0, payload: Data = Data()) -> Bool {
+        let frame = DroidOsProtocol.packFrame(type: droidOsType, flags: flags, payload: payload)
+        return send(data: frame)
+    }
+
+    /// Sends raw bytes across the high-speed USB Bulk OUT endpoint using timeout-guarded WritePipeTO
     public func send(data: Data) -> Bool {
-        guard isConnected, let intf = activeInterfaceInterface?.pointee?.pointee else { return false }
         sendLock.lock()
         defer { sendLock.unlock() }
+
+        guard isSessionActive, let intfPtr = activeInterfaceInterface, let intf = intfPtr.pointee?.pointee, bulkOutPipeRef != 0 else { return false }
+
+        // If the endpoint has repeatedly timed out (Android app closed or not consuming), abort early to avoid stalling callers
+        if consecutiveWriteTimeouts >= 2 {
+            return false
+        }
 
         return data.withUnsafeBytes { rawBuffer in
             guard let baseAddress = rawBuffer.baseAddress else { return false }
@@ -644,11 +720,17 @@ public final class AoaUsbManager: ObservableObject, @unchecked Sendable {
             while bytesWritten < totalBytes {
                 let chunkSize = min(totalBytes - bytesWritten, 16384)
                 let ptr = UnsafeMutableRawPointer(mutating: baseAddress.advanced(by: Int(bytesWritten)))
-                let kr = intf.WritePipe(activeInterfaceInterface, bulkOutPipeRef, ptr, chunkSize)
+                // Use WritePipeTO with 1500ms timeout instead of unbounded blocking WritePipe
+                let kr = intf.WritePipeTO(intfPtr, bulkOutPipeRef, ptr, chunkSize, 1500, 1500)
                 if kr != KERN_SUCCESS {
-                    print("❌ AoaUsbManager: WritePipe failed with kr=\(kr)")
+                    consecutiveWriteTimeouts += 1
+                    print("⚠️ AoaUsbManager: WritePipeTO timed out/failed with kr=\(kr) (consecutive: \(consecutiveWriteTimeouts))")
+                    if consecutiveWriteTimeouts >= 2 {
+                        print("❌ AoaUsbManager: USB Bulk OUT pipe stalled (no consumer on Android). Suspending write pipeline.")
+                    }
                     return false
                 }
+                consecutiveWriteTimeouts = 0
                 bytesWritten += chunkSize
             }
             return true
@@ -657,10 +739,24 @@ public final class AoaUsbManager: ObservableObject, @unchecked Sendable {
 
     /// Disconnects from the USB device and cleans up interface pointers
     public func disconnect() {
-        guard isConnected || activeInterfaceInterface != nil || activeDeviceInterface != nil else { return }
-        isConnected = false
-        isAccessoryMode = false
+        stateLock.lock()
+        let wasConnected = _rawIsConnected || activeInterfaceInterface != nil || activeDeviceInterface != nil
+        guard wasConnected else {
+            stateLock.unlock()
+            return
+        }
+        let devName = _rawConnectedDeviceName
+        if !devName.isEmpty {
+            failedProbeCooldowns[devName] = Date()
+        }
+        _rawIsConnected = false
+        _rawIsAccessoryMode = false
+        _rawIsDroidOsSession = false
+        _rawConnectedDeviceName = ""
+        consecutiveWriteTimeouts = 0
+        stateLock.unlock()
 
+        sendLock.lock()
         if let intfPtr = activeInterfaceInterface, let intf = intfPtr.pointee?.pointee {
             _ = intf.USBInterfaceClose(intfPtr)
             _ = intf.Release(intfPtr)
@@ -675,6 +771,7 @@ public final class AoaUsbManager: ObservableObject, @unchecked Sendable {
 
         bulkInPipeRef = 0
         bulkOutPipeRef = 0
+        sendLock.unlock()
 
         let toResume = drainFileContinuations()
         for cont in toResume {
@@ -687,9 +784,11 @@ public final class AoaUsbManager: ObservableObject, @unchecked Sendable {
             guard let self = self else { return }
             self.isConnected = false
             self.isAccessoryMode = false
+            self.isDroidOsSession = false
             self.connectedDeviceName = ""
             self.onConnectionStatusChanged?(false)
             NotificationCenter.default.post(name: .droidlinkUsbDisconnected, object: nil)
+            NotificationCenter.default.post(name: .droidlinkDeviceDisconnected, object: nil)
         }
     }
 
@@ -771,6 +870,7 @@ public final class AoaUsbManager: ObservableObject, @unchecked Sendable {
 
     /// Sends a Protobuf message framed over AOA USB Bulk OUT
     func send(message: Droidlink_Protocol_DroidLinkMessage) {
+        guard isSessionActive, !isDroidOsActive else { return }
         do {
             let serialized = try message.serializedData()
             let framer = MessageFramer()
@@ -783,30 +883,33 @@ public final class AoaUsbManager: ObservableObject, @unchecked Sendable {
 
     /// Sends telemetry message to Android client over AOA USB Bulk OUT
     public func sendTelemetry(_ status: DeviceStatusInfo) {
-        guard isConnected, let jsonStr = status.toJsonString() else { return }
-        var errMsg = Droidlink_Protocol_ErrorMessage()
-        errMsg.code = .errorUnknown
-        errMsg.message = "DEVICE_STATUS"
-        errMsg.details = jsonStr
+        guard isSessionActive, !isDroidOsActive, let jsonStr = status.toJsonString() else { return }
+        writeQueue.async { [weak self] in
+            guard let self = self, self.isSessionActive else { return }
+            var errMsg = Droidlink_Protocol_ErrorMessage()
+            errMsg.code = .errorUnknown
+            errMsg.message = "DEVICE_STATUS"
+            errMsg.details = jsonStr
 
-        var sysMsg = Droidlink_Protocol_SystemMessage()
-        sysMsg.event = .sysError
-        sysMsg.error = errMsg
+            var sysMsg = Droidlink_Protocol_SystemMessage()
+            sysMsg.event = .sysError
+            sysMsg.error = errMsg
 
-        var rootMsg = Droidlink_Protocol_DroidLinkMessage()
-        rootMsg.id = UInt64(Date().timeIntervalSince1970 * 1000)
-        rootMsg.timestamp = UInt64(Date().timeIntervalSince1970 * 1000)
-        rootMsg.type = .system
-        rootMsg.system = sysMsg
+            var rootMsg = Droidlink_Protocol_DroidLinkMessage()
+            rootMsg.id = UInt64(Date().timeIntervalSince1970 * 1000)
+            rootMsg.timestamp = UInt64(Date().timeIntervalSince1970 * 1000)
+            rootMsg.type = .system
+            rootMsg.system = sysMsg
 
-        send(message: rootMsg)
-        print("📊 Sent Mac telemetry to Android via AOA USB: \(status.deviceName) (\(status.deviceModel)) - \(status.batteryLevel)%")
-        fflush(stdout)
+            self.send(message: rootMsg)
+            print("📊 Sent Mac telemetry to Android via AOA USB: \(status.deviceName) (\(status.deviceModel)) - \(status.batteryLevel)%")
+            fflush(stdout)
+        }
     }
 
     /// Requests a file operation over high-speed AOA USB Bulk endpoints (35-45+ MB/s)
     func requestFileOperation(_ fileMsg: Droidlink_Protocol_FileMessage) async throws -> Droidlink_Protocol_FileMessage {
-        guard isConnected else {
+        guard isSessionActive else {
             throw NSError(domain: "AoaUsbManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "AOA USB is not connected"])
         }
         let reqId = fileMsg.fileID.isEmpty ? UUID().uuidString : fileMsg.fileID

@@ -156,6 +156,7 @@ final class ExternalDisplayTests: XCTestCase {
         XCTAssertEqual(decoded.brightness.timestamp, 1700000000000)
     }
 
+    @MainActor
     func testMacLuminanceMonitorCalculations() {
         let monitor = MacLuminanceMonitor.shared
         XCTAssertEqual(monitor.referenceCalibrationNits, 200.0)

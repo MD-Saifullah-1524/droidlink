@@ -91,7 +91,7 @@ final class ExternalDisplayManager: ObservableObject {
         scaleFactor: Double = 2.0,
         fps: Int32 = 60,
         hiDPI: Bool = true,
-        bitrateKbps: Int32 = 10000
+        bitrateKbps: Int32 = 16000
     ) {
         let rawWidth = max(width, height)
         let rawHeight = min(width, height)
@@ -259,7 +259,9 @@ final class ExternalDisplayManager: ObservableObject {
             let h = config.height > 0 ? config.height : 1080
             let fps = config.fps > 0 ? config.fps : 60
             let scale = config.scaleFactor > 0 ? Double(config.scaleFactor) : 2.0
-            let bitrate = config.bitrateKbps > 0 ? config.bitrateKbps : 10000
+            // Direct USB cable mode: always enforce highest quality bitrate settings
+            let maxBitrate: Int32 = fps >= 120 ? 20000 : 16000
+            let bitrate = config.bitrateKbps > 0 ? max(config.bitrateKbps, maxBitrate) : maxBitrate
 
             let targetW = Int32((max(w, h) / 16) * 16)
             let targetH = Int32((min(w, h) / 16) * 16)

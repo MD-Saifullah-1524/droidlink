@@ -159,9 +159,25 @@ public final class DroidOsManager: ObservableObject, @unchecked Sendable {
         AoaUsbManager.shared.send(droidOsType: .displayConfig, flags: 0, payload: payload)
     }
 
-    public func sendMouseEvent(action: DroidOsProtocol.MouseAction, button: DroidOsProtocol.MouseButton, scrollDeltaY: Int16 = 0, normalizedX: UInt16, normalizedY: UInt16) {
-        let payload = DroidOsProtocol.MousePayload(action: action, button: button, scrollDeltaY: scrollDeltaY, normalizedX: normalizedX, normalizedY: normalizedY).serialize()
-        AoaUsbManager.shared.send(droidOsType: .mouseEvent, flags: 0, payload: payload)
+    public func sendMouseEvent(
+        action: DroidOsProtocol.MouseAction,
+        button: DroidOsProtocol.MouseButton,
+        scrollDeltaY: Int16 = 0,
+        normalizedX: UInt16 = 0,
+        normalizedY: UInt16 = 0,
+        deltaX: Int16 = 0,
+        deltaY: Int16 = 0
+    ) {
+        let frame = DroidOsProtocol.packMouseFrame(
+            action: action,
+            button: button,
+            scrollDeltaY: scrollDeltaY,
+            normalizedX: normalizedX,
+            normalizedY: normalizedY,
+            deltaX: deltaX,
+            deltaY: deltaY
+        )
+        _ = AoaUsbManager.shared.send(data: frame)
     }
 
     public func sendKeyboardEvent(action: DroidOsProtocol.KeyAction, modifiers: DroidOsProtocol.KeyModifiers, androidKeyCode: UInt16, unicodeCodepoint: UInt32) {

@@ -55,13 +55,25 @@ public enum DroidOsProtocol {
         public let scrollDeltaY: Int16
         public let normalizedX: UInt16
         public let normalizedY: UInt16
+        public let deltaX: Int16
+        public let deltaY: Int16
 
-        public init(action: MouseAction, button: MouseButton, scrollDeltaY: Int16 = 0, normalizedX: UInt16, normalizedY: UInt16) {
+        public init(
+            action: MouseAction,
+            button: MouseButton,
+            scrollDeltaY: Int16 = 0,
+            normalizedX: UInt16 = 0,
+            normalizedY: UInt16 = 0,
+            deltaX: Int16 = 0,
+            deltaY: Int16 = 0
+        ) {
             self.action = action
             self.button = button
             self.scrollDeltaY = scrollDeltaY
             self.normalizedX = normalizedX
             self.normalizedY = normalizedY
+            self.deltaX = deltaX
+            self.deltaY = deltaY
         }
 
         public func serialize() -> Data {
@@ -78,7 +90,12 @@ public enum DroidOsProtocol {
             var yBE = normalizedY.bigEndian
             withUnsafeBytes(of: &yBE) { data.replaceSubrange(6..<8, with: $0) }
 
-            // Bytes 8..11 are reserved padding (zeros)
+            var dxBE = deltaX.bigEndian
+            withUnsafeBytes(of: &dxBE) { data.replaceSubrange(8..<10, with: $0) }
+
+            var dyBE = deltaY.bigEndian
+            withUnsafeBytes(of: &dyBE) { data.replaceSubrange(10..<12, with: $0) }
+
             return data
         }
     }
@@ -171,6 +188,48 @@ public enum DroidOsProtocol {
     }
 
     // MARK: - Frame Packaging Helper
+
+    /// Constructs an atomic 20-byte framed mouse packet directly in contiguous memory.
+    /// Header: 8 bytes ('D', 'O', 0x03, flags=0, payloadLength=12)
+    /// Payload: 12 bytes (action, button, scrollDeltaY, normalizedX, normalizedY, deltaX, deltaY)
+    public static func packMouseFrame(
+        action: MouseAction,
+        button: MouseButton,
+        scrollDeltaY: Int16 = 0,
+        normalizedX: UInt16 = 0,
+        normalizedY: UInt16 = 0,
+        deltaX: Int16 = 0,
+        deltaY: Int16 = 0
+    ) -> Data {
+        var packet = Data(count: 20)
+        packet[0] = magicByte0 // 'D' (0x44)
+        packet[1] = magicByte1 // 'O' (0x4F)
+        packet[2] = MessageType.mouseEvent.rawValue // 0x03
+        packet[3] = 0x00 // flags
+
+        var lengthBE = UInt32(12).bigEndian
+        withUnsafeBytes(of: &lengthBE) { packet.replaceSubrange(4..<8, with: $0) }
+
+        packet[8] = action.rawValue
+        packet[9] = button.rawValue
+
+        var scrollBE = scrollDeltaY.bigEndian
+        withUnsafeBytes(of: &scrollBE) { packet.replaceSubrange(10..<12, with: $0) }
+
+        var xBE = normalizedX.bigEndian
+        withUnsafeBytes(of: &xBE) { packet.replaceSubrange(12..<14, with: $0) }
+
+        var yBE = normalizedY.bigEndian
+        withUnsafeBytes(of: &yBE) { packet.replaceSubrange(14..<16, with: $0) }
+
+        var dxBE = deltaX.bigEndian
+        withUnsafeBytes(of: &dxBE) { packet.replaceSubrange(16..<18, with: $0) }
+
+        var dyBE = deltaY.bigEndian
+        withUnsafeBytes(of: &dyBE) { packet.replaceSubrange(18..<20, with: $0) }
+
+        return packet
+    }
 
     public static func packFrame(type: MessageType, flags: UInt8 = 0, payload: Data) -> Data {
         var packet = Data(count: headerSize + payload.count)

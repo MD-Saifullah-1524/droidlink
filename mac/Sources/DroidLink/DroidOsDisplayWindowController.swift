@@ -4,7 +4,7 @@ import SwiftUI
 /// Dedicated floating window controller hosting the droidOS workstation display view and overlay HUD.
 @MainActor
 public final class DroidOsDisplayWindowController: NSWindowController, NSWindowDelegate {
-    private var displayView: DroidOsDisplayView?
+    var displayView: DroidOsDisplayView?
     private var resizeDebounceTimer: Timer?
 
     public convenience init() {
@@ -23,6 +23,7 @@ public final class DroidOsDisplayWindowController: NSWindowController, NSWindowD
         window.isReleasedWhenClosed = false
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .visible
+        window.acceptsMouseMovedEvents = true
 
         self.init(window: window)
         window.delegate = self
@@ -60,7 +61,13 @@ public final class DroidOsDisplayWindowController: NSWindowController, NSWindowD
         }
     }
 
+    public func windowDidResignKey(_ notification: Notification) {
+        // Auto-release cursor & input grab when user switches apps (Cmd+Tab) or clicks another window
+        displayView?.releaseInput()
+    }
+
     public func windowWillClose(_ notification: Notification) {
+        displayView?.releaseInput()
         resizeDebounceTimer?.invalidate()
         resizeDebounceTimer = nil
     }

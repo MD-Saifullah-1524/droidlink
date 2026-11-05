@@ -42,7 +42,9 @@ final class DroidOsTests: XCTestCase {
             button: .primary,
             scrollDeltaY: -5,
             normalizedX: 32768,
-            normalizedY: 16384
+            normalizedY: 16384,
+            deltaX: 12,
+            deltaY: -8
         )
         let data = mouse.serialize()
         XCTAssertEqual(data.count, 12)
@@ -57,6 +59,52 @@ final class DroidOsTests: XCTestCase {
 
         let y = data.subdata(in: 6..<8).withUnsafeBytes { $0.load(as: UInt16.self).bigEndian }
         XCTAssertEqual(y, 16384)
+
+        let dx = data.subdata(in: 8..<10).withUnsafeBytes { $0.load(as: Int16.self).bigEndian }
+        XCTAssertEqual(dx, 12)
+
+        let dy = data.subdata(in: 10..<12).withUnsafeBytes { $0.load(as: Int16.self).bigEndian }
+        XCTAssertEqual(dy, -8)
+    }
+
+    func testAtomic20ByteMousePacketFraming() {
+        let frame = DroidOsProtocol.packMouseFrame(
+            action: .move,
+            button: .none,
+            scrollDeltaY: 0,
+            normalizedX: 1000,
+            normalizedY: 2000,
+            deltaX: 15,
+            deltaY: -25
+        )
+
+        XCTAssertEqual(frame.count, 20, "Atomic mouse packet frame must be exactly 20 bytes (8B header + 12B payload)")
+
+        // Check header bytes: 'D', 'O', 0x03, 0x00, 0x00, 0x00, 0x00, 0x0C
+        XCTAssertEqual(frame[0], 0x44) // 'D'
+        XCTAssertEqual(frame[1], 0x4F) // 'O'
+        XCTAssertEqual(frame[2], DroidOsProtocol.MessageType.mouseEvent.rawValue) // 0x03
+        XCTAssertEqual(frame[3], 0x00) // flags
+
+        let payloadLen = frame.subdata(in: 4..<8).withUnsafeBytes { $0.load(as: UInt32.self).bigEndian }
+        XCTAssertEqual(payloadLen, 12)
+
+        // Deframe using DroidOsFramer to test end-to-end compatibility
+        let framer = DroidOsFramer()
+        let messages = framer.deframe(chunk: frame)
+        XCTAssertEqual(messages.count, 1)
+        XCTAssertEqual(messages[0].type, .mouseEvent)
+        XCTAssertEqual(messages[0].payload.count, 12)
+
+        let payload = messages[0].payload
+        XCTAssertEqual(payload[0], DroidOsProtocol.MouseAction.move.rawValue)
+        XCTAssertEqual(payload[1], DroidOsProtocol.MouseButton.none.rawValue)
+
+        let dx = payload.subdata(in: 8..<10).withUnsafeBytes { $0.load(as: Int16.self).bigEndian }
+        XCTAssertEqual(dx, 15)
+
+        let dy = payload.subdata(in: 10..<12).withUnsafeBytes { $0.load(as: Int16.self).bigEndian }
+        XCTAssertEqual(dy, -25)
     }
 
     func testKeyboardPayloadSerialization() {
@@ -166,5 +214,97 @@ final class DroidOsTests: XCTestCase {
         XCTAssertEqual(MacToAndroidKeyMap.androidKeyCode(from: 51), 67) // Backspace -> AKEYCODE_DEL
         XCTAssertEqual(MacToAndroidKeyMap.androidKeyCode(from: 53), 111) // Escape -> AKEYCODE_ESCAPE
         XCTAssertEqual(MacToAndroidKeyMap.androidKeyCode(from: 126), 19) // Up -> AKEYCODE_DPAD_UP
+    }
+
+    // MARK: - Annex-B to AVCC Conversion Tests
+
+    func testAnnexBToAVCCConversion() {
+        // Construct Annex-B stream with 4-byte and 3-byte start codes and trailing padding:
+        // SPS (type 7): 4 bytes
+        // PPS (type 8): 4 bytes
+        // IDR Slice (type 5): 5 bytes
+        // Trailing zero padding: 3 bytes
+        var annexBData = Data()
+        annexBData.append(contentsOf: [0x00, 0x00, 0x00, 0x01, 0x67, 0x42, 0x00, 0x1F]) // SPS
+        annexBData.append(contentsOf: [0x00, 0x00, 0x01, 0x68, 0xCE, 0x38, 0x80])       // PPS (3-byte start code)
+        annexBData.append(contentsOf: [0x00, 0x00, 0x00, 0x01, 0x65, 0x88, 0x84, 0x00, 0x10]) // IDR Slice
+        annexBData.append(contentsOf: [0x00, 0x00, 0x00]) // Trailing zero padding
+
+        let nalus = DroidOsDisplayView.extractAnnexBNALUs(from: annexBData)
+        XCTAssertEqual(nalus.count, 3)
+
+        // 1. Verify SPS
+        XCTAssertEqual(nalus[0].count, 4)
+        XCTAssertEqual(nalus[0][0] & 0x1F, 7)
+        XCTAssertEqual(nalus[0], Data([0x67, 0x42, 0x00, 0x1F]))
+
+        // 2. Verify PPS
+        XCTAssertEqual(nalus[1].count, 4)
+        XCTAssertEqual(nalus[1][0] & 0x1F, 8)
+        XCTAssertEqual(nalus[1], Data([0x68, 0xCE, 0x38, 0x80]))
+
+        // 3. Verify IDR Slice
+        XCTAssertEqual(nalus[2].count, 5)
+        XCTAssertEqual(nalus[2][0] & 0x1F, 5)
+        XCTAssertEqual(nalus[2], Data([0x65, 0x88, 0x84, 0x00, 0x10]))
+
+        // 4. Verify AVCC Conversion:
+        // SPS and PPS must be excluded from AVCC slice buffer.
+        // IDR slice must be preceded by 4-byte big-endian length prefix (0x00000005).
+        let avcc = DroidOsDisplayView.convertToAVCC(nalus: nalus)
+        XCTAssertEqual(avcc.count, 4 + 5) // 4-byte length + 5-byte payload
+
+        let expectedLengthBE: [UInt8] = [0x00, 0x00, 0x00, 0x05]
+        let expectedSlicePayload: [UInt8] = [0x65, 0x88, 0x84, 0x00, 0x10]
+        let expectedAVCC = Data(expectedLengthBE + expectedSlicePayload)
+
+        XCTAssertEqual(avcc, expectedAVCC)
+
+        // Verify that NO Annex-B start codes remain in the AVCC buffer
+        let hasFourByteStartCode = avcc.range(of: Data([0x00, 0x00, 0x00, 0x01])) != nil
+        let hasThreeByteStartCode = avcc.range(of: Data([0x00, 0x00, 0x01])) != nil
+        XCTAssertFalse(hasFourByteStartCode, "AVCC stream must not contain 00 00 00 01 start codes")
+        XCTAssertFalse(hasThreeByteStartCode, "AVCC stream must not contain 00 01 start codes")
+    }
+
+    // MARK: - Input Grab & Release Tests (VMware Parity)
+
+    @MainActor
+    func testInputGrabAndReleaseState() {
+        let view = DroidOsDisplayView(frame: NSRect(x: 0, y: 0, width: 800, height: 600))
+        XCTAssertFalse(view.isGrabbed, "Initial state must be ungrabbed")
+
+        view.grabInput()
+        XCTAssertTrue(view.isGrabbed, "View must be grabbed after grabInput()")
+
+        view.releaseInput()
+        XCTAssertFalse(view.isGrabbed, "View must be ungrabbed after releaseInput()")
+    }
+
+    @MainActor
+    func testWindowResignKeyReleasesGrab() {
+        let controller = DroidOsDisplayWindowController()
+        guard let view = controller.displayView else {
+            XCTFail("Window controller must have a valid displayView")
+            return
+        }
+
+        view.grabInput()
+        XCTAssertTrue(view.isGrabbed)
+
+        // Simulate switching apps or window losing focus
+        controller.windowDidResignKey(Notification(name: NSWindow.didResignKeyNotification))
+        XCTAssertFalse(view.isGrabbed, "Resigning key window must automatically release grab")
+    }
+
+    @MainActor
+    func testWindowAcceptsMouseMovedEvents() {
+        let controller = DroidOsDisplayWindowController()
+        guard let window = controller.window else {
+            XCTFail("Window controller must have a valid NSWindow")
+            return
+        }
+
+        XCTAssertTrue(window.acceptsMouseMovedEvents, "NSWindow must accept mouse moved events so passive cursor events reach displayView")
     }
 }
